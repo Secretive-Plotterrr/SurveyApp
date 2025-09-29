@@ -1,66 +1,107 @@
-const bcrypt = require('bcrypt');
-const { createClient } = require('@supabase/supabase-js');
+const { supabase, supabaseAdmin } = require('../config/supabase');
 const jwt = require('jsonwebtoken');
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-const signup = async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const { data, error } = await supabase
-      .from('table1')
-      .insert([{ email, password: hashedPassword }])
-      .select('id, email')
-      .single();
-    if (error) throw error;
-    res.status(201).json({ message: 'User created', id: data.id, email: data.email });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
+const generateToken = (userId) => {
+  return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
 };
 
-const login = async (req, res) => {
-  const { email, password } = req.body;
+exports.signup = async (req, res, next) => {
   try {
+    const { email, password } = req.body;
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
-    const { data, error } = await supabase
-      .from('table1')
-      .select('id, email, password')
-      .eq('email', email)
-      .single();
-    if (error || !data) throw new Error('User not found');
-    const isValid = await bcrypt.compare(password, data.password);
-    if (!isValid) throw new Error('Invalid password');
-    const token = jwt.sign({ id: data.id, email: data.email }, process.env.JWT_SECRET, {
-      expiresIn: '1h',
+
+    const normalizedEmail = email.toLowerCase();
+    console.log('Attempting signup for:', normalizedEmail);
+
+    // Sign up user with Supabase
+    const { data, error } = await supabase.auth.signUp({
+      email: normalizedEmail,
+      password,
+      options: {
+        emailRedirectTo: 'http://localhost:3000/confirm-magic-link',
+      },
     });
-    res.status(200).json({ message: 'Login successful', token, user: { id: data.id, email: data.email } });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
 
-const getCurrentUser = async (req, res) => {
-  try {
-    const { data, error } = await supabase
+    if (error) {
+      console.error('Signup error:', error);
+      return res.status(400).json({ error: error.message });
+    }
+
+    if (!data.user) {
+      console.error('No user data returned from signup');
+      return res.status(400).json({ error: 'User creation failed' });
+    }
+
+    // Verify user exists in auth.users
+    const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(data.user.id);
+    if (userError || !userData.user) {
+      console.error('User not found in auth.users:', userError || 'No user data');
+      return res.status(400).json({ error: 'User not found after creation' });
+    }
+
+    console.log('User created in auth.users:', { id: data.user.id, email: normalizedEmail });
+
+    // Insert user data into table1 using supabaseAdmin to bypass RLS
+    const { error: tableError } = await supabaseAdmin
       .from('table1')
-      .select('id, email')
-      .eq('id', req.user.id)
-      .single();
-    if (error || !data) throw new Error('User not found');
-    res.status(200).json({ id: data.id, email: data.email });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
+      .insert([{ id: data.user.id, email: normalizedEmail, password }]);
+
+    if (tableError) {
+      console.error('Table insert error:', tableError);
+      return res.status(400).json({ error: `Failed to insert into table1: ${tableError.message}` });
+    }
+
+    console.log('Signup successful for user:', { id: data.user.id, email: normalizedEmail });
+    res.status(201).json({ message: 'Signup successful. Check your email for a magic link.' });
+  } catch (err) {
+    console.error('Signup catch error:', err);
+    res.status(500).json({ error: 'An unexpected error occurred during signup' });
+    next(err);
   }
 };
 
-module.exports = { signup, login, getCurrentUser };
+exports.login = async (req, res, next) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+    console.log('Attempting login for:', normalizedEmail);
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
+    if (error) {
+      console.error('Login error:', error);
+      if (error.message.includes('Invalid login credentials')) {
+        const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserByEmail(normalizedEmail);
+        if (userError || !userData.user) {
+          console.error('User not found:', normalizedEmail);
+          return res.status(400).json({ error: 'Email not found' });
+        }
+        if (!userData.user.confirmed_at) {
+          console.error('User not confirmed:', normalizedEmail);
+          return res.status(403).json({ error: 'Email not confirmed' });
+        }
+        return res.status(400).json({ error: 'Invalid password' });
+      }
+      return res.status(400).json({ error: error.message });
+    }
+
+    console.log('Login successful for user:', { id: data.user.id, email: normalizedEmail });
+    const token = generateToken(data.user.id);
+    res.status(200).json({ token, user: data.user });
+  } catch (err) {
+    console.error('Login catch error:', err);
+    next(err);
+  }
+};
 
 exports.resetPassword = async (req, res, next) => {
   try {
@@ -142,4 +183,3 @@ exports.logout = async (req, res, next) => {
     next(err);
   }
 };
-

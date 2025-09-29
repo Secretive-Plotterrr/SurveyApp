@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signUp } from '../utils/auth'; // Import from auth.js
 
 const SignUp = () => {
   const [email, setEmail] = useState('');
@@ -51,7 +50,17 @@ const SignUp = () => {
     }
 
     try {
-      await signUp(email, password); // Use auth.js signUp function
+      const response = await fetch('http://localhost:5000/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Signup failed');
+      }
+
       setShowSuccessModal(true);
     } catch (error) {
       setErrorMessage(error.message);
