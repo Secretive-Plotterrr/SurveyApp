@@ -1,0 +1,188 @@
+/* Ensure box-sizing is applied globally to prevent overflow */
+* {
+  box-sizing: border-box;
+}
+
+/* Root variables for easy adjustments */
+:root {
+  --container-padding: 1rem;
+  --container-margin: 1rem;
+  --container-min-height: 24rem;
+  --border-width: 1px; /* Consistent border width for all bordered elements */
+  --image-max-width-mobile: 80vw;
+  --image-max-width-desktop: 40vw;
+  --text-max-width-mobile: 90vw;
+  --text-max-width-desktop: 32rem;
+  --heading-font-size-mobile: 1.5rem;
+  --heading-font-size-desktop: 2.5rem;
+  --paragraph-font-size-mobile: 0.875rem;
+  --paragraph-font-size-desktop: 1rem;
+  --button-padding-x: 1.5rem;
+  --button-padding-y: 0.75rem;
+  --mobile-spacing-image: 1.5rem;
+  --mobile-spacing-text: 1.5rem;
+  --stat-border-width: 1px; /* Matches --border-width for consistency */
+  --stat-number-size: 1.5rem;
+  --stat-text-size: 0.875rem;
+  --stat-item-max-width: 12rem;
+}
+
+/* Container styles */
+.content-wrapper {
+  padding: var(--container-padding);
+  margin: var(--container-margin);
+  min-height: var(--container-min-height);
+  border: var(--border-width) solid white;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  max-width: 65rem;
+  width: 100%;
+}
+
+/* Image container styles */
+.image-container {
+  max-width: var(--image-max-width-mobile);
+  width: 100%;
+}
+
+@media (min-width: 1000px) {
+  .image-container {
+    max-width: var(--image-max-width-desktop);
+  }
+}
+
+@media (max-width: 640px) {
+  .image-container {
+    max-width: 90vw;
+  }
+}
+
+/* Text container styles */
+.text-container {
+  max-width: var(--text-max-width-mobile);
+  width: 100%;
+  padding: 0 1rem;
+}
+
+@media (min-width: 1000px) {
+  .text-container {
+    max-width: var(--text-max-width-desktop);
+    margin-right: 1.5rem;
+  }
+}
+
+/* Heading styles */
+.heading {
+  font-size: var(--heading-font-size-mobile);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+@media (min-width: 1000px) {
+  .heading {
+    font-size: var(--heading-font-size-desktop);
+  }
+}
+
+@media (max-width: 640px) {
+  .heading {
+    font-size: 1.25rem;
+  }
+}
+
+/* Paragraph styles */
+.paragraph {
+  font-size: var(--paragraph-font-size-mobile);
+  line-height: 1.625;
+}
+
+@media (min-width: 1000px) {
+  .paragraph {
+    font-size: var(--paragraph-font-size-desktop);
+  }
+}
+
+@media (max-width: 640px) {
+  .paragraph {
+    font-size: 0.75rem;
+  }
+}
+
+/* Button styles */
+.button {
+  padding: var(--button-padding-y) var(--button-padding-x);
+  border-radius: 0.5rem;
+}
+
+/* Mobile-specific spacing */
+@media (max-width: 1000px) {
+  .image-container {
+    margin-bottom: var(--mobile-spacing-image);
+  }
+  .text-container {
+    margin-top: var(--mobile-spacing-text);
+  }
+}
+
+/* Stats container styles */
+.stat-container {
+  max-width: 72rem;
+  width: 100%;
+}
+
+/* Stat item styles */
+.stat-item {
+  border: var(--stat-border-width) solid white;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem;
+  flex: 1;
+  max-width: var(--stat-item-max-width);
+  min-width: 8rem;
+}
+
+/* Stat number styles with animation */
+.stat-number {
+  font-size: var(--stat-number-size);
+  animation: fadeIn 2s ease-in-out;
+}
+
+/* Fade-in animation for numbers */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stat text styles */
+.stat-text {
+  font-size: var(--stat-text-size);
+}
+
+/* Mobile-specific stat layout */
+@media (max-width: 1000px) {
+  .stat-container {
+    gap: 1rem;
+  }
+  .content-wrapper,
+  .stat-item {
+    width: 90vw; /* Equal width for all bordered elements in mobile view */
+    max-width: 90vw; /* Prevents overflow */
+  }
+}
+
+@media (max-width: 640px) {
+  .stat-item {
+    padding: 0.75rem;
+  }
+  .stat-number {
+    font-size: 1.25rem;
+  }
+  .stat-text {
+    font-size: 0.75rem;
+  }
+}

@@ -1,0 +1,143 @@
+/* Ensure box-sizing is applied globally */
+* {
+  box-sizing: border-box;
+}
+
+/* Root variables for easy adjustments */
+:root {
+  --big-border-width: 2px;
+  --big-border-color: #e0e7ff;
+  --inner-border-width: 1px;
+  --grid-item-min-height: 12rem;
+  --container-padding: 1.5rem;
+}
+
+/* Big border container styles */
+.big-border {
+  border: var(--big-border-width) solid var(--big-border-color);
+  border-radius: 0.75rem;
+  padding: var(--container-padding);
+  background-color: #f3f4f6;
+  width: 100%;
+  max-width: 48rem; /* Increased max-width for better desktop view */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Grid container for 2x2 layout */
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Inner border styles */
+.inner-border {
+  border: var(--inner-border-width) solid #fff;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: var(--grid-item-min-height);
+  background-color: #e5e7eb;
+}
+
+/* Icon styles */
+.icon {
+  margin-bottom: 1rem;
+}
+
+/* Button styles */
+button {
+  font-size: 1rem;
+  cursor: pointer;
+  width: 100%;
+  max-width: 12rem; /* Fixed button width for consistency */
+}
+
+/* Desktop and larger screens */
+@media (min-width: 1024px) {
+  .grid-container {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+  }
+  .inner-border {
+    min-height: 15rem; /* Slightly larger for desktop */
+  }
+  .big-border {
+    max-width: 48rem;
+  }
+}
+
+/* Tablet layout (between 768px and 1023px) */
+@media (max-width: 1023px) and (min-width: 768px) {
+  .grid-container {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+  }
+  .inner-border {
+    min-height: 14rem;
+  }
+  .big-border {
+    max-width: 36rem;
+  }
+  button {
+    max-width: 10rem;
+  }
+}
+
+/* Mobile-specific layout (below 768px) */
+@media (max-width: 767px) {
+  .grid-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 0.75rem;
+  }
+  .inner-border {
+    min-height: 10rem;
+    width: 100%;
+    padding: 0.75rem;
+  }
+  .big-border {
+    padding: 1rem;
+    width: 100%;
+  }
+  button {
+    width: 100%;
+    max-width: 100%;
+    padding: 0.75rem;
+  }
+  h2 {
+    font-size: 2rem;
+  }
+  h3 {
+    font-size: 1.125rem;
+  }
+  p {
+    font-size: 0.875rem;
+  }
+}
+
+/* Very small screens (below 480px) */
+@media (max-width: 479px) {
+  .inner-border {
+    min-height: 8rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+  }
+  h3 {
+    font-size: 1rem;
+  }
+  p {
+    font-size: 0.75rem;
+  }
+  button {
+    font-size: 0.875rem;
+  }
+}

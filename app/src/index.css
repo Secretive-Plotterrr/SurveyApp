@@ -1,0 +1,9 @@
+/* src/index.css (or src/App.css) - Ensure Tailwind directives are here if not already */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
