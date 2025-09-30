@@ -14,12 +14,13 @@ const signup = async (req, res, next) => {
 
     const normalizedEmail = email.toLowerCase();
     console.log('Attempting signup for:', normalizedEmail);
+    console.log('Signup emailRedirectTo:', `${process.env.FRONTEND_URL}/confirm-magic-link`); // Debug log
 
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: `${process.env.FRONTEND_URL}/login`, // Updated for production
+        emailRedirectTo: `${process.env.FRONTEND_URL}/confirm-magic-link`, // Updated to match route
       },
     });
 
@@ -108,7 +109,7 @@ const sendResetPassword = async (req, res, next) => {
     }
 
     const normalizedEmail = email.toLowerCase();
-
+    console.log('Reset password redirectTo:', `${process.env.FRONTEND_URL}/forgot-password`); // Add debug log
     const { data, error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: `${process.env.FRONTEND_URL}/forgot-password`,
     });
