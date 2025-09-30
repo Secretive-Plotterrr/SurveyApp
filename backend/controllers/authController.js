@@ -15,12 +15,11 @@ exports.signup = async (req, res, next) => {
     const normalizedEmail = email.toLowerCase();
     console.log('Attempting signup for:', normalizedEmail);
 
-    // Sign up user with Supabase
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: 'http://localhost:3000/confirm-magic-link',
+        emailRedirectTo: `${process.env.FRONTEND_URL}/confirm-magic-link`,
       },
     });
 
@@ -34,7 +33,6 @@ exports.signup = async (req, res, next) => {
       return res.status(400).json({ error: 'User creation failed' });
     }
 
-    // Verify user exists in auth.users
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(data.user.id);
     if (userError || !userData.user) {
       console.error('User not found in auth.users:', userError || 'No user data');
@@ -43,7 +41,6 @@ exports.signup = async (req, res, next) => {
 
     console.log('User created in auth.users:', { id: data.user.id, email: normalizedEmail });
 
-    // Insert user data into table1 using supabaseAdmin to bypass RLS
     const { error: tableError } = await supabaseAdmin
       .from('table1')
       .insert([{ id: data.user.id, email: normalizedEmail, password }]);
@@ -54,7 +51,7 @@ exports.signup = async (req, res, next) => {
     }
 
     console.log('Signup successful for user:', { id: data.user.id, email: normalizedEmail });
-    res.status(201).json({ message: 'Signup successful. Check your email for a magic link.' });
+    res.status(201).json({ message: 'Signup successful. Check your email for a confirmation link.' });
   } catch (err) {
     console.error('Signup catch error:', err);
     res.status(500).json({ error: 'An unexpected error occurred during signup' });
@@ -180,6 +177,18 @@ exports.logout = async (req, res, next) => {
     res.status(200).json({ message: 'Logout successful' });
   } catch (err) {
     console.error('Logout catch error:', err);
+    next(err);
+  }
+};
+
+exports.getUserProfile = async (req, res, next) => {
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      return res.status(401).json({ error: error.message });
+    }
+    res.status(200).json({ user: data.user });
+  } catch (err) {
     next(err);
   }
 };

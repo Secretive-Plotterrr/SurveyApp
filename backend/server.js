@@ -8,34 +8,26 @@ const rateLimit = require('express-rate-limit');
 dotenv.config();
 const app = express();
 
-const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+const frontendUrl = process.env.FRONTEND_URL || 'https://survey-app-mauve-phi.vercel.app';
 
-// Middleware
 app.use(cors({ origin: frontendUrl, credentials: true }));
 app.use(express.json());
 
-// Root route
 app.get('/', (req, res) => {
   res.status(200).json({ message: 'Welcome to the KnowYou Survey App Backend' });
 });
 
-// Rate limiting for /auth/chat
 const chatLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: 'Too many chat requests, please try again later.',
 });
 
-// Routes
-app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/auth/chat', chatLimiter);
 
-// Apply rate limiting to chat endpoint
-app.use('/auth/chat', chatLimiter);
-
-// Error handling middleware
 app.use(errorMiddleware);
 
-// Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
