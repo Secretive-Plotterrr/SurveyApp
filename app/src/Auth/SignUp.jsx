@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signUp } from './api'; // Adjust path based on your folder structure
 
 const SignUp = () => {
   const [email, setEmail] = useState('');
@@ -12,7 +11,7 @@ const SignUp = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
-  console.log('API URL:', process.env.REACT_APP_API_URL); // Debug log
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
   useEffect(() => {
     setTimeout(() => setIsVisible(true), 100);
@@ -53,10 +52,20 @@ const SignUp = () => {
     }
 
     try {
-      await signUp(email, password);
+      const response = await fetch(`${backendUrl}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Signup failed');
+      }
+
       setShowSuccessModal(true);
     } catch (error) {
-      setErrorMessage(error || 'Signup failed');
+      setErrorMessage(error.message);
       setShowErrorModal(true);
     }
   };
