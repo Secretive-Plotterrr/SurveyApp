@@ -21,9 +21,10 @@ const ResultTest = () => {
   const formData = location.state?.formData || {};
   const chatRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const hasSavedResults = useRef(false); // Track if results have been saved
+  const hasSavedResults = useRef(false);
 
   const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+  console.log('Backend URL:', backendUrl); // Debug log
 
   // Define questions for Self-Efficacy and Goal Orientation
   const selfEfficacyQuestions = [
@@ -157,8 +158,8 @@ const ResultTest = () => {
 
   // Save results to Supabase on component mount
   useEffect(() => {
-    if (hasSavedResults.current) return; // Prevent duplicate saves
-    hasSavedResults.current = true; // Mark as saved
+    if (hasSavedResults.current) return;
+    hasSavedResults.current = true;
 
     const saveResults = async () => {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -202,7 +203,7 @@ const ResultTest = () => {
     };
 
     saveResults();
-  }, []); // Empty dependency array to run only once on mount
+  }, [selfEfficacyData, goalOrientationData, selfEfficacyGrandMean, goalOrientationGrandMean, selfEfficacyGrandVerbal, goalOrientationGrandVerbal, selfEfficacyTotal, goalOrientationTotal, selfEfficacyInterpretation, goalOrientationInterpretation, selfEfficacySuggestions, goalOrientationSuggestions]);
 
   // Handle Done button click with scroll-to-top on next page
   const handleDone = () => {
@@ -246,6 +247,7 @@ const ResultTest = () => {
       setInput('');
       try {
         const token = localStorage.getItem('token');
+        console.log('Token:', token ? 'Present' : 'Missing'); // Debug log
         if (!token) {
           setMessages((prev) => [...prev, { text: 'Please log in to use the chatbot.', sender: 'bot' }]);
           return;
@@ -257,13 +259,8 @@ const ResultTest = () => {
           setMessages((prev) => [...prev, { text: 'Error: Invalid or missing survey scores. Please complete the survey again.', sender: 'bot' }]);
           return;
         }
-        console.log('Sending request with:', {
-          token: token ? 'Present' : 'Missing',
-          message: userMessage,
-          selfEfficacyScore,
-          goalOrientationScore,
-        });
-        const response = await fetch(`${backendUrl}/auth/chat`, {
+        console.log('Sending request to:', `${backendUrl}/api/auth/chat`); // Debug log
+        const response = await fetch(`${backendUrl}/api/auth/chat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -289,7 +286,6 @@ const ResultTest = () => {
     }
   };
 
-  // Handle chatbot button click with scroll to top
   const handleChatOpen = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setTimeout(() => setIsChatOpen(true), 300);
@@ -301,7 +297,6 @@ const ResultTest = () => {
         <h2 className="text-3xl sm:text-4xl font-extrabold text-center text-gray-900 mb-6 sm:mb-8">
           Your Survey <span className="text-blue-500">Results</span>
         </h2>
-        {/* Self-Efficacy Section */}
         <section className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl mb-6 sm:mb-8 transform transition-all duration-300 hover:shadow-3xl hover:scale-[1.02]" aria-labelledby="self-efficacy-heading">
           <h3 id="self-efficacy-heading" className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Self-Efficacy Results</h3>
           <div className="overflow-x-auto mb-6">
@@ -329,7 +324,6 @@ const ResultTest = () => {
               </tbody>
             </table>
           </div>
-          {/* Progress Bar for Grand Mean */}
           <div className="mb-6">
             <p className="text-gray-700 font-medium mb-2">Overall Self-Efficacy Level:</p>
             <div className="bg-gray-200 h-2 rounded-full overflow-hidden">
@@ -339,7 +333,6 @@ const ResultTest = () => {
               ></div>
             </div>
           </div>
-          {/* Interpretation and Suggestions */}
           <div>
             <p className={`text-lg font-semibold mb-2 ${selfEfficacyColor}`}>Interpretation: {selfEfficacyInterpretation}</p>
             <h4 className="text-md font-semibold text-gray-800 mb-2">Suggestions for Improvement:</h4>
@@ -350,7 +343,6 @@ const ResultTest = () => {
             </ul>
           </div>
         </section>
-        {/* Goal Orientation Section */}
         <section className="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl mb-6 sm:mb-8 transform transition-all duration-300 hover:shadow-3xl hover:scale-[1.02]" aria-labelledby="goal-orientation-heading">
           <h3 id="goal-orientation-heading" className="text-xl sm:text-2xl font-bold text-gray-900 mb-4">Mastery Goal Orientation Results</h3>
           <div className="overflow-x-auto mb-6">
@@ -378,7 +370,6 @@ const ResultTest = () => {
               </tbody>
             </table>
           </div>
-          {/* Progress Bar for Grand Mean */}
           <div className="mb-6">
             <p className="text-gray-700 font-medium mb-2">Overall Goal Orientation Level:</p>
             <div className="bg-gray-200 h-2 rounded-full overflow-hidden">
@@ -388,7 +379,6 @@ const ResultTest = () => {
               ></div>
             </div>
           </div>
-          {/* Interpretation and Suggestions */}
           <div>
             <p className={`text-lg font-semibold mb-2 ${goalOrientationColor}`}>Interpretation: {goalOrientationInterpretation}</p>
             <h4 className="text-md font-semibold text-gray-800 mb-2">Suggestions for Improvement:</h4>

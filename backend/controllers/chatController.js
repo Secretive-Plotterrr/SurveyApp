@@ -1,8 +1,9 @@
 const { supabase } = require('../config/supabase');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
 const getLevel = (score) => {
   if (score > 32) return 'High';
@@ -10,11 +11,26 @@ const getLevel = (score) => {
   return 'Low';
 };
 
-const generateResponse = async (req, res) => {
+const generateResponse = async (req, res, next) => {
   try {
     const { message, selfEfficacyScore, goalOrientationScore } = req.body;
-    const user = req.user;
-    console.log('Received chat message:', { message, userId: user?.userId || null, selfEfficacyScore, goalOrientationScore });
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    let userId;
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      userId = decoded.userId;
+    } catch (err) {
+      console.error('Token verification error:', err.message);
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+
+    console.log('Received chat message:', { message, userId, selfEfficacyScore, goalOrientationScore });
 
     if (!message || message.trim().length === 0) {
       return res.status(400).json({ error: 'Message cannot be empty' });
@@ -61,7 +77,7 @@ User question: ${message}`;
     try {
       const { error } = await supabase
         .from('chat_messages')
-        .insert({ user_id: user?.userId || null, message, response: text });
+        .insert({ user_id: userId, message, response: text });
       if (error) {
         console.error('Supabase insert error:', error.message, error.details, error.hint);
       }

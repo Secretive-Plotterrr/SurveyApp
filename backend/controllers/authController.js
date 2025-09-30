@@ -1,3 +1,4 @@
+// authController.js (new file or update authRoutes with these functions)
 const { supabase, supabaseAdmin } = require('../config/supabase');
 const jwt = require('jsonwebtoken');
 
@@ -5,7 +6,7 @@ const generateToken = (userId) => {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: '1h' });
 };
 
-exports.signup = async (req, res, next) => {
+const signup = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -19,7 +20,7 @@ exports.signup = async (req, res, next) => {
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: `${process.env.FRONTEND_URL}/confirm-magic-link`,
+        emailRedirectTo: `${process.env.FRONTEND_URL}/login`,
       },
     });
 
@@ -33,6 +34,7 @@ exports.signup = async (req, res, next) => {
       return res.status(400).json({ error: 'User creation failed' });
     }
 
+    // Verify user exists in auth.users
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(data.user.id);
     if (userError || !userData.user) {
       console.error('User not found in auth.users:', userError || 'No user data');
@@ -41,6 +43,7 @@ exports.signup = async (req, res, next) => {
 
     console.log('User created in auth.users:', { id: data.user.id, email: normalizedEmail });
 
+    // Insert user data into table1 using supabaseAdmin to bypass RLS
     const { error: tableError } = await supabaseAdmin
       .from('table1')
       .insert([{ id: data.user.id, email: normalizedEmail, password }]);
@@ -59,7 +62,7 @@ exports.signup = async (req, res, next) => {
   }
 };
 
-exports.login = async (req, res, next) => {
+const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
@@ -100,7 +103,33 @@ exports.login = async (req, res, next) => {
   }
 };
 
-exports.resetPassword = async (req, res, next) => {
+const sendResetPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const normalizedEmail = email.toLowerCase();
+
+    const { data, error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+      redirectTo: `${process.env.FRONTEND_URL}/forgot-password`,
+    });
+
+    if (error) {
+      console.error('Send reset password error:', error);
+      return res.status(400).json({ error: error.message });
+    }
+
+    console.log('Reset password email sent for:', normalizedEmail);
+    res.status(200).json({ message: 'Password reset email sent. Check your inbox.' });
+  } catch (err) {
+    console.error('Send reset password catch error:', err);
+    next(err);
+  }
+};
+
+const updatePassword = async (req, res, next) => {
   try {
     const { password, token_hash, type } = req.body;
     if (!password || !token_hash || type !== 'recovery') {
@@ -148,7 +177,7 @@ exports.resetPassword = async (req, res, next) => {
   }
 };
 
-exports.getCurrentUser = async (req, res, next) => {
+const getCurrentUser = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
@@ -172,7 +201,7 @@ exports.getCurrentUser = async (req, res, next) => {
   }
 };
 
-exports.logout = async (req, res, next) => {
+const logout = async (req, res, next) => {
   try {
     res.status(200).json({ message: 'Logout successful' });
   } catch (err) {
@@ -181,7 +210,7 @@ exports.logout = async (req, res, next) => {
   }
 };
 
-exports.getUserProfile = async (req, res, next) => {
+const getUserProfile = async (req, res, next) => {
   try {
     const { data, error } = await supabase.auth.getUser();
     if (error) {
@@ -192,3 +221,5 @@ exports.getUserProfile = async (req, res, next) => {
     next(err);
   }
 };
+
+module.exports = { signup, login, sendResetPassword, updatePassword, getCurrentUser, logout, getUserProfile };

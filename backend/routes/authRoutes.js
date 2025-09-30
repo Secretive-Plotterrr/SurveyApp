@@ -1,12 +1,15 @@
 const express = require('express');
-const router = express.Router();
-const authController = require('../controllers/authController');
-const chatController = require('../controllers/chatController');
-const authMiddleware = require('../middleware/authMiddleware');
+const { signup, login, updatePassword, getCurrentUser, logout, getUserProfile, sendResetPassword } = require('../controllers/authController'); // Assume you have a controller file with these functions
 
-router.post('/signup', authController.signup);
-router.post('/login', authController.login);
-router.get('/me', authMiddleware, authController.getCurrentUser);
-router.post('/chat', authMiddleware, chatController.generateResponse);
+const router = express.Router();
+
+router.post('/signup', signup);
+router.post('/login', login);
+router.post('/reset-password', sendResetPassword);
+router.post('/update-password', updatePassword);
+router.get('/user', getCurrentUser);
+router.post('/logout', logout);
+router.get('/profile', getUserProfile);
+router.post('/chat', generateResponse);
 
 module.exports = router;
