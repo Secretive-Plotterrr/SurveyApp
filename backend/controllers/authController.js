@@ -11,16 +11,15 @@ const signup = async (req, res, next) => {
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
-
     const normalizedEmail = email.toLowerCase();
+    console.log('FRONTEND_URL:', process.env.FRONTEND_URL); // Debug log
     console.log('Attempting signup for:', normalizedEmail);
-    console.log('Signup emailRedirectTo:', `${process.env.FRONTEND_URL}/confirm-magic-link`); // Debug log
-
+    console.log('Signup emailRedirectTo:', `${process.env.FRONTEND_URL}/confirm-magic-link`);
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: `${process.env.FRONTEND_URL}/confirm-magic-link`, // Updated to match route
+        emailRedirectTo: `${process.env.FRONTEND_URL}/confirm-magic-link`,
       },
     });
 
