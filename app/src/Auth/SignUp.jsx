@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signUp } from './api'; // Adjust path based on your folder structure
+import { signUp } from '../utils/auth.js'; // Adjust path based on your folder structure
 
 const SignUp = () => {
   const [email, setEmail] = useState('');
