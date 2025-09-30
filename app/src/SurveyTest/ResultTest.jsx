@@ -22,7 +22,7 @@ const ResultTest = () => {
   const messagesEndRef = useRef(null);
   const hasSavedResults = useRef(false);
 
-  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'https://surveyapp-3-mj3e.onrender.com';
   console.log('ResultTest loaded, Backend URL:', backendUrl);
 
   const selfEfficacyQuestions = [
@@ -251,13 +251,29 @@ const ResultTest = () => {
       });
 
       const response = await fetch(`${backendUrl}/api/auth/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ message: userMessage, selfEfficacyScore, goalOrientationScore }),
-      });
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`,
+  },
+  body: JSON.stringify({
+    message: userMessage,
+    selfEfficacyScore,
+    goalOrientationScore
+  }),
+});
+
+console.log('Sending request to:', `${backendUrl}/api/auth/chat`);
+console.log('Request method:', 'POST');
+console.log('Request headers:', {
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${token}`
+});
+console.log('Request body:', JSON.stringify({
+  message: userMessage,
+  selfEfficacyScore,
+  goalOrientationScore
+}, null, 2));
 
       console.log('Fetch response status:', response.status);
 
