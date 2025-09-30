@@ -11,6 +11,8 @@ const SignUp = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+
   useEffect(() => {
     setTimeout(() => setIsVisible(true), 100);
   }, []);
@@ -50,7 +52,7 @@ const SignUp = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/auth/signup', {
+      const response = await fetch(`${backendUrl}/auth/signup`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),

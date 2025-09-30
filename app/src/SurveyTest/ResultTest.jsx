@@ -23,6 +23,8 @@ const ResultTest = () => {
   const messagesEndRef = useRef(null);
   const hasSavedResults = useRef(false); // Track if results have been saved
 
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+
   // Define questions for Self-Efficacy and Goal Orientation
   const selfEfficacyQuestions = [
     { id: 'q1', text: 'I can always manage to solve difficult problems if I try hard enough.' },
@@ -261,7 +263,7 @@ const ResultTest = () => {
           selfEfficacyScore,
           goalOrientationScore,
         });
-        const response = await fetch('http://localhost:5000/auth/chat', {
+        const response = await fetch(`${backendUrl}/auth/chat`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
