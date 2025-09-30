@@ -1,4 +1,3 @@
-// authController.js (new file or update authRoutes with these functions)
 const { supabase, supabaseAdmin } = require('../config/supabase');
 const jwt = require('jsonwebtoken');
 
@@ -20,7 +19,7 @@ const signup = async (req, res, next) => {
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: `${process.env.FRONTEND_URL}/login`,
+        emailRedirectTo: `${process.env.FRONTEND_URL}/login`, // Updated for production
       },
     });
 
@@ -34,7 +33,6 @@ const signup = async (req, res, next) => {
       return res.status(400).json({ error: 'User creation failed' });
     }
 
-    // Verify user exists in auth.users
     const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(data.user.id);
     if (userError || !userData.user) {
       console.error('User not found in auth.users:', userError || 'No user data');
@@ -43,7 +41,6 @@ const signup = async (req, res, next) => {
 
     console.log('User created in auth.users:', { id: data.user.id, email: normalizedEmail });
 
-    // Insert user data into table1 using supabaseAdmin to bypass RLS
     const { error: tableError } = await supabaseAdmin
       .from('table1')
       .insert([{ id: data.user.id, email: normalizedEmail, password }]);

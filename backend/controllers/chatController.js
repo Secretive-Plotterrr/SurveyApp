@@ -1,9 +1,8 @@
 const { supabase } = require('../config/supabase');
-const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'; // Updated to available model
 
 const getLevel = (score) => {
   if (score > 32) return 'High';
@@ -29,15 +28,14 @@ const generateResponse = async (req, res, next) => {
       return res.status(401).json({ error: 'Invalid token format' });
     }
 
-    let userId;
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      userId = decoded.userId;
-      console.log('Token verified, userId:', userId);
-    } catch (err) {
-      console.error('Token verification error:', err.message);
+    // Use Supabase to verify the token (since frontend uses Supabase access_token)
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data.user) {
+      console.error('Supabase token verification error:', error?.message);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
+    const userId = data.user.id;
+    console.log('Token verified, userId:', userId);
 
     if (!message || message.trim().length === 0) {
       console.error('Empty message received');
@@ -100,7 +98,6 @@ User question: ${message}`;
       }
     } catch (supabaseError) {
       console.error('Supabase error:', supabaseError.message, supabaseError.stack);
-      // Continue with response even if storage fails
     }
 
     res.status(200).json({ response: text });
