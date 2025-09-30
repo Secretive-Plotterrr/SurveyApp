@@ -16,26 +16,36 @@ const generateResponse = async (req, res, next) => {
     const { message, selfEfficacyScore, goalOrientationScore } = req.body;
     const authHeader = req.headers.authorization;
 
+    console.log('Chat request received:', { message, selfEfficacyScore, goalOrientationScore, authHeader });
+
     if (!authHeader) {
+      console.error('No authorization header provided');
       return res.status(401).json({ error: 'No token provided' });
     }
 
     const token = authHeader.split(' ')[1];
+    if (!token) {
+      console.error('Token missing in authorization header');
+      return res.status(401).json({ error: 'Invalid token format' });
+    }
+
     let userId;
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       userId = decoded.userId;
+      console.log('Token verified, userId:', userId);
     } catch (err) {
       console.error('Token verification error:', err.message);
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    console.log('Received chat message:', { message, userId, selfEfficacyScore, goalOrientationScore });
-
     if (!message || message.trim().length === 0) {
+      console.error('Empty message received');
       return res.status(400).json({ error: 'Message cannot be empty' });
     }
+
     if (typeof selfEfficacyScore !== 'number' || typeof goalOrientationScore !== 'number' || isNaN(selfEfficacyScore) || isNaN(goalOrientationScore)) {
+      console.error('Invalid scores:', { selfEfficacyScore, goalOrientationScore });
       return res.status(400).json({ error: 'Scores must be valid numbers' });
     }
 
@@ -47,6 +57,7 @@ User question: ${message}`;
 
     let text;
     try {
+      console.log('Calling Gemini API with key:', GEMINI_API_KEY ? 'Present' : 'Missing');
       const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
         method: 'POST',
         headers: {
@@ -62,13 +73,17 @@ User question: ${message}`;
           ],
         }),
       });
+
       if (!response.ok) {
         const errorData = await response.json();
+        console.error('Gemini API response error:', errorData);
         throw new Error(`Gemini API error: ${errorData.error?.message || 'Unknown error'}`);
       }
+
       const data = await response.json();
-      text = data.candidates[0]?.content?.parts[0]?.text || 'I didn’t understand that.';
-      console.log('Gemini response:', text);
+      console.log('Gemini API raw response:', JSON.stringify(data, null, 2));
+      text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'I didn’t understand that.';
+      console.log('Extracted Gemini response:', text);
     } catch (geminiError) {
       console.error('Gemini API error:', geminiError.message, geminiError.stack);
       return res.status(500).json({ error: `Failed to generate response from AI service: ${geminiError.message}` });
@@ -80,6 +95,8 @@ User question: ${message}`;
         .insert({ user_id: userId, message, response: text });
       if (error) {
         console.error('Supabase insert error:', error.message, error.details, error.hint);
+      } else {
+        console.log('Chat message saved to Supabase');
       }
     } catch (supabaseError) {
       console.error('Supabase error:', supabaseError.message, supabaseError.stack);
@@ -88,7 +105,7 @@ User question: ${message}`;
 
     res.status(200).json({ response: text });
   } catch (error) {
-    console.error('Chat error:', error.message, error.stack);
+    console.error('Chat endpoint error:', error.message, error.stack);
     res.status(500).json({ error: 'Failed to generate response. Please try again.' });
   }
 };

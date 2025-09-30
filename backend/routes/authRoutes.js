@@ -1,5 +1,6 @@
 const express = require('express');
-const { signup, login, updatePassword, getCurrentUser, logout, getUserProfile, sendResetPassword } = require('../controllers/authController'); // Assume you have a controller file with these functions
+const { signup, login, updatePassword, getCurrentUser, logout, getUserProfile, sendResetPassword } = require('../controllers/authController');
+const { generateResponse } = require('../controllers/chatController');
 
 const router = express.Router();
 

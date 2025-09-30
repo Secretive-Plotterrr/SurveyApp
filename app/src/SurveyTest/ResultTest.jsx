@@ -7,7 +7,6 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qb2Rvc3Rvbmt2Ym92Y2dyYXl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3OTc1MjcsImV4cCI6MjA3NDM3MzUyN30.3PAIczMstQ0UjtN260KMV5-VG56EtO9Cc5gkyIN2tTA'
 );
 
-// Function to get verbal interpretation based on mean
 const getVerbal = (mean) => {
   if (mean >= 3.26) return 'High';
   if (mean >= 2.51) return 'Moderate High';
@@ -24,9 +23,8 @@ const ResultTest = () => {
   const hasSavedResults = useRef(false);
 
   const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
-  console.log('Backend URL:', backendUrl); // Debug log
+  console.log('ResultTest loaded, Backend URL:', backendUrl);
 
-  // Define questions for Self-Efficacy and Goal Orientation
   const selfEfficacyQuestions = [
     { id: 'q1', text: 'I can always manage to solve difficult problems if I try hard enough.' },
     { id: 'q2', text: 'If someone opposes me, I can find the means and ways to get what I want.' },
@@ -53,34 +51,22 @@ const ResultTest = () => {
     { id: 'q20', text: 'I adjust my goal-setting approach based on what I have learned from past experiences.' },
   ];
 
-  // Generate data based on user answers
   const selfEfficacyData = selfEfficacyQuestions.map(q => {
     const score = parseInt(formData[q.id] || 0);
-    return {
-      question: q.text,
-      mean: score,
-      interpretation: getVerbal(score),
-    };
+    return { question: q.text, mean: score, interpretation: getVerbal(score) };
   });
 
   const goalOrientationData = goalOrientationQuestions.map(q => {
     const score = parseInt(formData[q.id] || 0);
-    return {
-      question: q.text,
-      mean: score,
-      interpretation: getVerbal(score),
-    };
+    return { question: q.text, mean: score, interpretation: getVerbal(score) };
   });
 
-  // Calculate Grand Means
   const selfEfficacyGrandMean = (selfEfficacyData.reduce((sum, item) => sum + item.mean, 0) / selfEfficacyData.length).toFixed(2);
   const goalOrientationGrandMean = (goalOrientationData.reduce((sum, item) => sum + item.mean, 0) / goalOrientationData.length).toFixed(2);
 
-  // Grand Verbal Interpretations
   const selfEfficacyGrandVerbal = getVerbal(parseFloat(selfEfficacyGrandMean));
   const goalOrientationGrandVerbal = getVerbal(parseFloat(goalOrientationGrandMean));
 
-  // Interpretations and Suggestions
   const getInterpretationColor = (interpretation) => {
     if (interpretation === 'High') return 'text-green-600';
     if (interpretation === 'Moderate High') return 'text-yellow-600';
@@ -89,7 +75,6 @@ const ResultTest = () => {
     return 'text-gray-600';
   };
 
-  // Self-Efficacy Interpretation and Suggestions
   const selfEfficacyTotal = parseFloat(selfEfficacyGrandMean) * 10;
   let selfEfficacyInterpretation = '';
   let selfEfficacySuggestions = [];
@@ -120,7 +105,6 @@ const ResultTest = () => {
     selfEfficacyColor = 'text-red-600';
   }
 
-  // Goal Orientation Interpretation and Suggestions
   const goalOrientationTotal = parseFloat(goalOrientationGrandMean) * 10;
   let goalOrientationInterpretation = '';
   let goalOrientationSuggestions = [];
@@ -151,12 +135,10 @@ const ResultTest = () => {
     goalOrientationColor = 'text-red-600';
   }
 
-  // Scroll to top on page load/refresh
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, []);
 
-  // Save results to Supabase on component mount
   useEffect(() => {
     if (hasSavedResults.current) return;
     hasSavedResults.current = true;
@@ -205,7 +187,6 @@ const ResultTest = () => {
     saveResults();
   }, [selfEfficacyData, goalOrientationData, selfEfficacyGrandMean, goalOrientationGrandMean, selfEfficacyGrandVerbal, goalOrientationGrandVerbal, selfEfficacyTotal, goalOrientationTotal, selfEfficacyInterpretation, goalOrientationInterpretation, selfEfficacySuggestions, goalOrientationSuggestions]);
 
-  // Handle Done button click with scroll-to-top on next page
   const handleDone = () => {
     navigate('/');
     setTimeout(() => {
@@ -213,19 +194,16 @@ const ResultTest = () => {
     }, 100);
   };
 
-  // Chatbot state
   const [messages, setMessages] = useState([{ text: 'Hello! Ask me any questions about your results.', sender: 'bot' }]);
   const [input, setInput] = useState('');
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  // Auto-scroll to bottom when messages update
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
-  // Handle clicks outside the chatbot to close it
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (chatRef.current && !chatRef.current.contains(event.target)) {
@@ -241,48 +219,64 @@ const ResultTest = () => {
   }, [isChatOpen]);
 
   const handleSend = async () => {
-    if (input.trim()) {
-      const userMessage = input.trim();
-      setMessages((prev) => [...prev, { text: userMessage, sender: 'user' }]);
-      setInput('');
-      try {
-        const token = localStorage.getItem('token');
-        console.log('Token:', token ? 'Present' : 'Missing'); // Debug log
-        if (!token) {
-          setMessages((prev) => [...prev, { text: 'Please log in to use the chatbot.', sender: 'bot' }]);
-          return;
-        }
-        const selfEfficacyScore = selfEfficacyData.reduce((sum, item) => sum + item.mean, 0);
-        const goalOrientationScore = goalOrientationData.reduce((sum, item) => sum + item.mean, 0);
-        if (typeof selfEfficacyScore !== 'number' || typeof goalOrientationScore !== 'number' || isNaN(selfEfficacyScore) || isNaN(goalOrientationScore)) {
-          console.error('Invalid scores:', { selfEfficacyScore, goalOrientationScore });
-          setMessages((prev) => [...prev, { text: 'Error: Invalid or missing survey scores. Please complete the survey again.', sender: 'bot' }]);
-          return;
-        }
-        console.log('Sending request to:', `${backendUrl}/api/auth/chat`); // Debug log
-        const response = await fetch(`${backendUrl}/api/auth/chat`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ message: userMessage, selfEfficacyScore, goalOrientationScore }),
-        });
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('Server error response:', errorData);
-          setMessages((prev) => [
-            ...prev,
-            { text: errorData.error || 'Sorry, the server encountered an error. Please try again later.', sender: 'bot' },
-          ]);
-          return;
-        }
-        const data = await response.json();
-        setMessages((prev) => [...prev, { text: data.response, sender: 'bot' }]);
-      } catch (error) {
-        console.error('Chat error:', error.message, error.stack);
-        setMessages((prev) => [...prev, { text: 'Oops, something went wrong. Please try again!', sender: 'bot' }]);
+    if (!input.trim()) return;
+
+    const userMessage = input.trim();
+    setMessages((prev) => [...prev, { text: userMessage, sender: 'user' }]);
+    setInput('');
+
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Sending chat request with:', { token: token ? 'Present' : 'Missing', message: userMessage });
+
+      if (!token) {
+        console.error('No token found in localStorage');
+        setMessages((prev) => [...prev, { text: 'Please log in to use the chatbot.', sender: 'bot' }]);
+        return;
       }
+
+      const selfEfficacyScore = selfEfficacyData.reduce((sum, item) => sum + item.mean, 0);
+      const goalOrientationScore = goalOrientationData.reduce((sum, item) => sum + item.mean, 0);
+
+      if (typeof selfEfficacyScore !== 'number' || typeof goalOrientationScore !== 'number' || isNaN(selfEfficacyScore) || isNaN(goalOrientationScore)) {
+        console.error('Invalid scores:', { selfEfficacyScore, goalOrientationScore });
+        setMessages((prev) => [...prev, { text: 'Error: Invalid or missing survey scores. Please complete the survey again.', sender: 'bot' }]);
+        return;
+      }
+
+      console.log('Sending request to:', `${backendUrl}/api/auth/chat`, {
+        selfEfficacyScore,
+        goalOrientationScore,
+        message: userMessage,
+      });
+
+      const response = await fetch(`${backendUrl}/api/auth/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ message: userMessage, selfEfficacyScore, goalOrientationScore }),
+      });
+
+      console.log('Fetch response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Server error response:', errorData);
+        setMessages((prev) => [
+          ...prev,
+          { text: errorData.error || 'Sorry, the server encountered an error. Please try again later.', sender: 'bot' },
+        ]);
+        return;
+      }
+
+      const data = await response.json();
+      console.log('Server response data:', data);
+      setMessages((prev) => [...prev, { text: data.response, sender: 'bot' }]);
+    } catch (error) {
+      console.error('Chat fetch error:', error.message, error.stack);
+      setMessages((prev) => [...prev, { text: 'Oops, something went wrong. Please try again!', sender: 'bot' }]);
     }
   };
 

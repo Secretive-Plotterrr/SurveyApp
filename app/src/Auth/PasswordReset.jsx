@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -8,6 +8,7 @@ const supabase = createClient(
 );
 
 const PasswordReset = () => {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -15,11 +16,24 @@ const PasswordReset = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [showCheckmark, setShowCheckmark] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [tokenHash, setTokenHash] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const backendUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
   useEffect(() => {
     setTimeout(() => setIsVisible(true), 100);
-  }, []);
+
+    const hashParams = new URLSearchParams(location.hash.substring(1));
+    const access_token = hashParams.get('access_token');
+    const type = hashParams.get('type');
+
+    if (access_token && type === 'recovery') {
+      setTokenHash(access_token);
+      console.log('Password reset token detected:', access_token);
+    }
+  }, [location]);
 
   useEffect(() => {
     if (showSuccessModal) {
@@ -49,6 +63,35 @@ const PasswordReset = () => {
     e.preventDefault();
     setErrorMessage('');
 
+    if (!tokenHash) {
+      if (!email) {
+        setErrorMessage('Please enter your email.');
+        setShowErrorModal(true);
+        return;
+      }
+
+      try {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${process.env.REACT_APP_BACKEND_URL}/forgot-password`,
+        });
+
+        if (error) {
+          console.error('Supabase reset password error:', error.message);
+          setErrorMessage(error.message || 'Failed to send reset email');
+          setShowErrorModal(true);
+          return;
+        }
+
+        setShowSuccessModal(true);
+        setErrorMessage('Password reset email sent. Check your inbox.');
+      } catch (error) {
+        console.error('Unexpected error sending reset email:', error.message);
+        setErrorMessage(error.message || 'An unexpected error occurred');
+        setShowErrorModal(true);
+      }
+      return;
+    }
+
     if (!password || !confirmPassword) {
       setErrorMessage('Please fill in both password fields.');
       setShowErrorModal(true);
@@ -62,17 +105,28 @@ const PasswordReset = () => {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      const response = await fetch(`${backendUrl}/api/auth/update-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ password, token_hash: tokenHash, type: 'recovery' }),
+      });
 
-      if (error) {
-        setErrorMessage(error.message || 'Failed to reset password');
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Password update error:', errorData);
+        setErrorMessage(errorData.error || 'Failed to reset password');
         setShowErrorModal(true);
         return;
       }
 
+      await supabase.auth.setSession({ access_token: tokenHash });
       setShowSuccessModal(true);
+      setErrorMessage('Password reset successful! Redirecting to login...');
     } catch (error) {
-      setErrorMessage(error.message);
+      console.error('Unexpected password reset error:', error.message);
+      setErrorMessage(error.message || 'An unexpected error occurred');
       setShowErrorModal(true);
     }
   };
@@ -89,44 +143,64 @@ const PasswordReset = () => {
             Know<span className="text-blue-400">You</span>
           </h2>
           <p className="text-center text-gray-500 mb-6 sm:mb-8 text-base sm:text-lg">
-            Enter your new password.
+            {tokenHash ? 'Enter your new password.' : 'Enter your email to receive a password reset link.'}
           </p>
           <form onSubmit={handleResetPassword} className="space-y-5 sm:space-y-6">
-            <div>
-              <label htmlFor="password" className="block text-sm font-semibold text-black">
-                New Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-2 block w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400 text-sm sm:text-base"
-                placeholder="Enter new password"
-                required
-              />
-            </div>
-            <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-semibold text-black">
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                id="confirmPassword"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-2 block w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400 text-sm sm:text-base"
-                placeholder="Confirm new password"
-                required
-              />
-            </div>
+            {!tokenHash && (
+              <div>
+                <label htmlFor="email" className="block text-sm font-semibold text-black">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mt-2 block w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400 text-sm sm:text-base"
+                  placeholder="Enter your email"
+                  required
+                />
+              </div>
+            )}
+            {tokenHash && (
+              <>
+                <div>
+                  <label htmlFor="password" className="block text-sm font-semibold text-black">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    id="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="mt-2 block w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400 text-sm sm:text-base"
+                    placeholder="Enter new password"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-sm font-semibold text-black">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    id="confirmPassword"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="mt-2 block w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400 text-sm sm:text-base"
+                    placeholder="Confirm new password"
+                    required
+                  />
+                </div>
+              </>
+            )}
             <div className="flex justify-center">
               <button
                 type="submit"
                 disabled={showSuccessModal}
                 className="w-full sm:w-2/3 bg-blue-400 text-white p-3 rounded-lg hover:bg-blue-500 transition-colors font-semibold text-sm sm:text-base transform hover:scale-105 disabled:bg-blue-300 disabled:cursor-not-allowed"
               >
-                Confirm Reset
+                {tokenHash ? 'Confirm Reset' : 'Send Reset Email'}
               </button>
             </div>
             <div className="flex justify-center text-sm mt-3">
@@ -159,10 +233,10 @@ const PasswordReset = () => {
             }}
           >
             <h3 className="text-xl sm:text-2xl font-bold text-center text-black mb-4">
-              Password Reset Successful
+              {tokenHash ? 'Password Reset Successful' : 'Reset Email Sent'}
             </h3>
             <p className="text-center text-gray-600 mb-6 text-sm sm:text-base">
-              Your password has been reset! Redirecting to login...
+              {errorMessage}
             </p>
             <div className="flex justify-center">
               {showCheckmark ? (
