@@ -14,6 +14,11 @@ const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 app.use(cors({ origin: frontendUrl, credentials: true }));
 app.use(express.json());
 
+// Root route
+app.get('/', (req, res) => {
+  res.status(200).json({ message: 'Welcome to the KnowYou Survey App Backend' });
+});
+
 // Rate limiting for /auth/chat
 const chatLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
