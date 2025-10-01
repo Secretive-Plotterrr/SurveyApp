@@ -37,19 +37,28 @@ const ForgotPassword = () => {
   }, [showModal, navigate]);
 
   useEffect(() => {
-    if (showErrorModal && countdown !== null) {
-      const timer = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            setShowErrorModal(false);
-            setErrorMessage('');
-            return null;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      return () => clearInterval(timer);
+    if (showErrorModal) {
+      let countdownTimer;
+      if (countdown !== null) {
+        countdownTimer = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(countdownTimer);
+              return null;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
+      const closeTimer = setTimeout(() => {
+        setShowErrorModal(false);
+        setErrorMessage('');
+        setCountdown(null);
+      }, 2500);
+      return () => {
+        if (countdownTimer) clearInterval(countdownTimer);
+        clearTimeout(closeTimer);
+      };
     }
   }, [showErrorModal, countdown]);
 
