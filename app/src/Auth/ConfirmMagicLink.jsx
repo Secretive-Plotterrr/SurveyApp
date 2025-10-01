@@ -25,7 +25,6 @@ const ConfirmMagicLink = () => {
 
         if (!tokenHash || type !== 'magiclink') {
           setErrorMessage('Invalid or missing verification token. Please check the link or request a new one.');
-          setShowCheckmark(false);
           return;
         }
 
@@ -37,35 +36,31 @@ const ConfirmMagicLink = () => {
         if (error) {
           console.error('Supabase verifyOtp error:', error.message);
           setErrorMessage(`Verification failed: ${error.message}`);
-          setShowCheckmark(false);
           return;
         }
 
         if (data.session) {
           localStorage.setItem('token', data.session.access_token);
           console.log('Verification successful, session set:', data.session);
+          setShowCheckmark(true); // Show checkmark on success
         } else {
           console.warn('No session returned after verification');
+          setErrorMessage('Verification completed, but no session was returned.');
         }
       } catch (err) {
         console.error('Magic link processing error:', err);
         setErrorMessage('An unexpected error occurred during verification. Please try again.');
-        setShowCheckmark(false);
       }
     };
 
     handleMagicLink();
 
-    const checkmarkTimer = setTimeout(() => setShowCheckmark(true), 1000);
     const redirectTimer = setTimeout(() => {
       setShowModal(false);
       navigate('/login', { replace: true });
     }, 2500);
 
-    return () => {
-      clearTimeout(checkmarkTimer);
-      clearTimeout(redirectTimer);
-    };
+    return () => clearTimeout(redirectTimer);
   }, [navigate, location]);
 
   return (
@@ -99,24 +94,28 @@ const ConfirmMagicLink = () => {
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                 </svg>
-              ) : showCheckmark ? (
-                <svg
-                  className="w-10 sm:w-12 h-10 sm:h-12 text-green-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
               ) : (
-                <svg
-                  className="w-10 sm:w-12 h-10 sm:h-12 text-blue-400 animate-spin"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 0116 0 8 8 0 01-16 0" />
-                </svg>
+                <>
+                  {showCheckmark ? (
+                    <svg
+                      className="w-10 sm:w-12 h-10 sm:h-12 text-green-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-10 sm:w-12 h-10 sm:h-12 text-blue-400 animate-spin"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 0116 0 8 8 0 01-16 0" />
+                    </svg>
+                  )}
+                </>
               )}
             </div>
           </div>
