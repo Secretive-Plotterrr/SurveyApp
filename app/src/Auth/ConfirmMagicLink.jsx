@@ -10,6 +10,7 @@ const supabase = createClient(
 const ConfirmMagicLink = () => {
   const [showModal, setShowModal] = useState(true);
   const [showCheckmark, setShowCheckmark] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -20,22 +21,36 @@ const ConfirmMagicLink = () => {
         const tokenHash = params.get('token_hash');
         const type = params.get('type');
 
-        console.log('URL params:', { tokenHash, type });
+        console.log('URL params:', { tokenHash, type, fullSearch: location.search });
 
-        if (tokenHash && type === 'magiclink') {
-          const { data, error } = await supabase.auth.verifyOtp({
-            token_hash: tokenHash,
-            type: 'magiclink',
-          });
+        if (!tokenHash || type !== 'magiclink') {
+          setErrorMessage('Invalid or missing verification token. Please check the link or request a new one.');
+          setShowCheckmark(false);
+          return;
+        }
 
-          if (error) {
-            console.error('Supabase verifyOtp error:', error);
-          } else if (data.session) {
-            localStorage.setItem('token', data.session.access_token);
-          }
+        const { data, error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: 'magiclink',
+        });
+
+        if (error) {
+          console.error('Supabase verifyOtp error:', error.message);
+          setErrorMessage(`Verification failed: ${error.message}`);
+          setShowCheckmark(false);
+          return;
+        }
+
+        if (data.session) {
+          localStorage.setItem('token', data.session.access_token);
+          console.log('Verification successful, session set:', data.session);
+        } else {
+          console.warn('No session returned after verification');
         }
       } catch (err) {
         console.error('Magic link processing error:', err);
+        setErrorMessage('An unexpected error occurred during verification. Please try again.');
+        setShowCheckmark(false);
       }
     };
 
@@ -65,15 +80,26 @@ const ConfirmMagicLink = () => {
             }}
           >
             <h3 className="text-xl sm:text-2xl font-bold text-center text-black mb-4">
-              Verification in Progress
+              {errorMessage ? 'Verification Error' : 'Verification in Progress'}
             </h3>
             <p className="text-center text-gray-600 mb-6 text-sm sm:text-base">
-              {showCheckmark
-                ? 'Congratulations, your account has been verified, please login your account!'
-                : 'Verifying your account...'}
+              {errorMessage
+                ? errorMessage
+                : showCheckmark
+                  ? 'Congratulations, your account has been verified, please login your account!'
+                  : 'Verifying your account...'}
             </p>
             <div className="flex justify-center">
-              {showCheckmark ? (
+              {errorMessage ? (
+                <svg
+                  className="w-10 sm:w-12 h-10 sm:h-12 text-red-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : showCheckmark ? (
                 <svg
                   className="w-10 sm:w-12 h-10 sm:h-12 text-green-500"
                   fill="none"

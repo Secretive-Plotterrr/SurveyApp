@@ -44,8 +44,10 @@ const ForgotPassword = () => {
     }
 
     try {
+      // Dynamic redirectTo: Uses current origin (localhost in dev, Vercel URL in prod)
+      const frontendUrl = process.env.REACT_APP_FRONTEND_URL || window.location.origin;
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'http://localhost:3000/reset-password',
+        redirectTo: `${frontendUrl}/reset-password`, // Redirects to /reset-password after email click
       });
 
       if (error) {
@@ -53,8 +55,10 @@ const ForgotPassword = () => {
       }
 
       setShowModal(true);
+      setErrorMessage(''); // Clear any prior errors
     } catch (error) {
-      setErrorMessage(error.message);
+      console.error('Password reset error:', error);
+      setErrorMessage(error.message || 'Failed to send reset email. Please try again.');
     }
   };
 
@@ -134,7 +138,7 @@ const ForgotPassword = () => {
               Reset Link Sent
             </h3>
             <p className="text-center text-gray-600 mb-6 text-sm sm:text-base">
-              Password reset email sent! Check your email.
+              Password reset email sent! Check your inbox (and spam folder).
             </p>
             <div className="flex justify-center">
               {showCheckmark ? (
@@ -164,6 +168,7 @@ const ForgotPassword = () => {
   );
 };
 
+// Error Boundary (unchanged)
 class ForgotPasswordWithErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
 

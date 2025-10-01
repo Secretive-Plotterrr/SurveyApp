@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { generateResponse } = require('../controllers/authController'); // Adjust path as needed
 
-router.post('/chat', chatLimiter, generateResponse);
+router.post('/chat', generateResponse);
 
 // Other routes (e.g., signup, login, etc.)
 router.post('/signup', signup);

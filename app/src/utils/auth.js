@@ -1,12 +1,14 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+const API_URL = process.env.REACT_APP_API_URL || 'https://surveyapp-3-mj3e.onrender.com'; // Updated default to Render URL
 
 export const signUp = async (email, password) => {
   try {
     const response = await axios.post(`${API_URL}/api/auth/signup`, { email, password });
+    console.log('Signup response:', response.data);
     return response.data;
   } catch (error) {
+    console.error('Signup error:', error.response?.data || error.message);
     throw error.response?.data?.error || 'Sign-up failed';
   }
 };

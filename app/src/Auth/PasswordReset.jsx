@@ -25,6 +25,7 @@ const PasswordReset = () => {
   useEffect(() => {
     setTimeout(() => setIsVisible(true), 100);
 
+    // Extract token from URL hash (Supabase recovery link format)
     const hashParams = new URLSearchParams(location.hash.substring(1));
     const access_token = hashParams.get('access_token');
     const type = hashParams.get('type');
@@ -63,6 +64,7 @@ const PasswordReset = () => {
     e.preventDefault();
     setErrorMessage('');
 
+    // If no token, fallback to sending reset email (as in your original code)
     if (!tokenHash) {
       if (!email) {
         setErrorMessage('Please enter your email.');
@@ -71,8 +73,10 @@ const PasswordReset = () => {
       }
 
       try {
+        // Dynamic redirectTo: Uses current origin (localhost in dev, Vercel URL in prod)
+        const frontendUrl = process.env.REACT_APP_FRONTEND_URL || window.location.origin;
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${process.env.REACT_APP_BACKEND_URL}/forgot-password`,
+          redirectTo: `${frontendUrl}/reset-password`, // FIXED: Point to frontend, not backend
         });
 
         if (error) {
@@ -92,6 +96,7 @@ const PasswordReset = () => {
       return;
     }
 
+    // If token present, update password
     if (!password || !confirmPassword) {
       setErrorMessage('Please fill in both password fields.');
       setShowErrorModal(true);
@@ -105,12 +110,27 @@ const PasswordReset = () => {
     }
 
     try {
+      // Use Supabase to update password directly (preferred over custom backend for recovery)
+      // If you must use backend API, keep the fetch below; otherwise, replace with this:
+      const { error: supabaseError } = await supabase.auth.updateUser({
+        password,
+      });
+
+      if (supabaseError) {
+        console.error('Supabase update password error:', supabaseError.message);
+        setErrorMessage(supabaseError.message || 'Failed to reset password');
+        setShowErrorModal(true);
+        return;
+      }
+
+      // Fallback to your backend API if needed (uncomment if Supabase update doesn't fit your auth flow)
+      /*
       const response = await fetch(`${backendUrl}/api/auth/update-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ password, token_hash: tokenHash, type: 'recovery' }),
+        body: JSON.stringify({ email, newPassword: password, token_hash: tokenHash, type: 'recovery' }), // FIXED: Use 'newPassword' if backend expects it
       });
 
       if (!response.ok) {
@@ -120,7 +140,9 @@ const PasswordReset = () => {
         setShowErrorModal(true);
         return;
       }
+      */
 
+      // Set session after successful update
       await supabase.auth.setSession({ access_token: tokenHash });
       setShowSuccessModal(true);
       setErrorMessage('Password reset successful! Redirecting to login...');
@@ -236,7 +258,7 @@ const PasswordReset = () => {
               {tokenHash ? 'Password Reset Successful' : 'Reset Email Sent'}
             </h3>
             <p className="text-center text-gray-600 mb-6 text-sm sm:text-base">
-              {errorMessage}
+              {errorMessage || (tokenHash ? 'You can now log in with your new password.' : 'Check your email (and spam folder) for a confirmation link.')}
             </p>
             <div className="flex justify-center">
               {showCheckmark ? (
@@ -294,6 +316,7 @@ const PasswordReset = () => {
   );
 };
 
+// Error Boundary (unchanged)
 class PasswordResetWithErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
 

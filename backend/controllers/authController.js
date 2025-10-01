@@ -19,7 +19,7 @@ const signup = async (req, res, next) => {
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: `${process.env.FRONTEND_URL}/login`, // Updated for production
+        emailRedirectTo: `${process.env.FRONTEND_URL}/confirm-magic-link`, // FIXED: Point to confirmation page
       },
     });
 
