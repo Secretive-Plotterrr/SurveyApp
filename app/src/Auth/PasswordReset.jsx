@@ -28,13 +28,15 @@ const PasswordReset = () => {
     const accessToken = hashParams.get('access_token');
     const type = hashParams.get('type');
 
-    console.log('URL hash params:', { accessToken, type, fullHash: location.hash });
+    console.log('URL hash params:', { accessToken, type, fullHash: location.hash, fullUrl: window.location.href });
 
     if (accessToken && type === 'recovery') {
       setTokenHash(accessToken);
       console.log('Password reset token detected:', accessToken);
     } else {
       console.warn('No valid recovery token found in URL');
+      setErrorMessage('Invalid or missing reset link. Please request a new password reset email.');
+      setShowErrorModal(true);
     }
   }, [location]);
 

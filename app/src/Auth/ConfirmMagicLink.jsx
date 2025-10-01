@@ -1,57 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  'https://njodostonkvbovcgrayz.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qb2Rvc3Rvbmt2Ym92Y2dyYXl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3OTc1MjcsImV4cCI6MjA3NDM3MzUyN30.3PAIczMstQ0UjtN260KMV5-VG56EtO9Cc5gkyIN2tTA'
-);
+import { useNavigate } from 'react-router-dom';
 
 const ConfirmMagicLink = () => {
   const [showModal, setShowModal] = useState(true);
   const [showCheckmark, setShowCheckmark] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
-    const handleMagicLink = async () => {
-      try {
-        const params = new URLSearchParams(location.search);
-        const tokenHash = params.get('token_hash');
-        const type = params.get('type');
+    // Show loading for 3 seconds, then show checkmark
+    const checkmarkTimer = setTimeout(() => {
+      setShowCheckmark(true);
+    }, 3000);
 
-        console.log('URL params:', { tokenHash, type });
-
-        if (tokenHash && type === 'magiclink') {
-          const { data, error } = await supabase.auth.verifyOtp({
-            token_hash: tokenHash,
-            type: 'magiclink',
-          });
-
-          if (error) {
-            console.error('Supabase verifyOtp error:', error);
-          } else if (data.session) {
-            localStorage.setItem('token', data.session.access_token);
-          }
-        }
-      } catch (err) {
-        console.error('Magic link processing error:', err);
-      }
-    };
-
-    handleMagicLink();
-
-    const checkmarkTimer = setTimeout(() => setShowCheckmark(true), 1000);
+    // Redirect to login after 3 seconds
     const redirectTimer = setTimeout(() => {
       setShowModal(false);
       navigate('/login', { replace: true });
-    }, 2500);
+    }, 6000); // Total 6s: 3s loading + 3s checkmark
 
     return () => {
       clearTimeout(checkmarkTimer);
       clearTimeout(redirectTimer);
     };
-  }, [navigate, location]);
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#F0F8FF] px-4">
@@ -65,11 +36,11 @@ const ConfirmMagicLink = () => {
             }}
           >
             <h3 className="text-xl sm:text-2xl font-bold text-center text-black mb-4">
-              Verification in Progress
+              {showCheckmark ? 'Congrats!' : 'Confirming...'}
             </h3>
             <p className="text-center text-gray-600 mb-6 text-sm sm:text-base">
               {showCheckmark
-                ? 'Congratulations, your account has been verified, please login your account!'
+                ? 'Your account has been verified, redirecting to login your account'
                 : 'Verifying your account...'}
             </p>
             <div className="flex justify-center">
