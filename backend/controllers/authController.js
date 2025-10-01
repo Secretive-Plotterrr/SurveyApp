@@ -19,7 +19,7 @@ const signup = async (req, res, next) => {
       email: normalizedEmail,
       password,
       options: {
-        emailRedirectTo: `${process.env.FRONTEND_URL}/login`,
+        emailRedirectTo: `${process.env.FRONTEND_URL}/login`, // Updated for production
       },
     });
 
@@ -108,10 +108,8 @@ const sendResetPassword = async (req, res, next) => {
     }
 
     const normalizedEmail = email.toLowerCase();
-    const redirectTo = `${process.env.FRONTEND_URL}/reset-password`;
-    console.log('Sending reset password email with redirectTo:', redirectTo);
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
-      redirectTo,
+      redirectTo: `${process.env.FRONTEND_URL}/reset-password`,
     });
 
     if (error) {
@@ -119,7 +117,7 @@ const sendResetPassword = async (req, res, next) => {
       return res.status(400).json({ error: error.message });
     }
 
-    console.log('Reset password email sent for:', normalizedEmail, 'with redirectTo:', redirectTo);
+    console.log('Reset password email sent for:', normalizedEmail);
     res.status(200).json({ message: 'Password reset email sent. Check your inbox.' });
   } catch (err) {
     console.error('Send reset password catch error:', err);
