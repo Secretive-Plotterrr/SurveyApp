@@ -75,13 +75,11 @@ const ForgotPassword = () => {
 
     try {
       const frontendUrl = process.env.REACT_APP_FRONTEND_URL || window.location.origin;
-      console.log('Sending reset email with redirectTo:', `${frontendUrl}/reset-password`);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${frontendUrl}/reset-password`,
       });
 
       if (error) {
-        console.error('Supabase resetPasswordForEmail error:', error.message);
         if (error.message.includes('For security purposes, you can only request this after')) {
           const seconds = error.message.match(/after (\d+) seconds/)?.[1];
           setCountdown(seconds ? parseInt(seconds, 10) : 60);
@@ -94,11 +92,10 @@ const ForgotPassword = () => {
         return;
       }
 
-      console.log('Reset email sent successfully for:', email);
       setShowModal(true);
       setErrorMessage('');
     } catch (error) {
-      console.error('Unexpected password reset error:', error);
+      console.error('Password reset error:', error);
       setErrorMessage(error.message || 'Failed to send reset email. Please try again.');
       setShowErrorModal(true);
     }
