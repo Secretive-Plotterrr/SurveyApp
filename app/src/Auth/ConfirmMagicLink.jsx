@@ -10,7 +10,6 @@ const supabase = createClient(
 const ConfirmMagicLink = () => {
   const [showModal, setShowModal] = useState(true);
   const [showCheckmark, setShowCheckmark] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -21,46 +20,37 @@ const ConfirmMagicLink = () => {
         const tokenHash = params.get('token_hash');
         const type = params.get('type');
 
-        console.log('URL params:', { tokenHash, type, fullSearch: location.search });
+        console.log('URL params:', { tokenHash, type });
 
-        if (!tokenHash || type !== 'magiclink') {
-          setErrorMessage('Invalid or missing verification token. Please check the link or request a new one.');
-          return;
-        }
+        if (tokenHash && type === 'magiclink') {
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'magiclink',
+          });
 
-        const { data, error } = await supabase.auth.verifyOtp({
-          token_hash: tokenHash,
-          type: 'magiclink',
-        });
-
-        if (error) {
-          console.error('Supabase verifyOtp error:', error.message);
-          setErrorMessage(`Verification failed: ${error.message}`);
-          return;
-        }
-
-        if (data.session) {
-          localStorage.setItem('token', data.session.access_token);
-          console.log('Verification successful, session set:', data.session);
-          setShowCheckmark(true); // Show checkmark on success
-        } else {
-          console.warn('No session returned after verification');
-          setErrorMessage('Verification completed, but no session was returned.');
+          if (error) {
+            console.error('Supabase verifyOtp error:', error);
+          } else if (data.session) {
+            localStorage.setItem('token', data.session.access_token);
+          }
         }
       } catch (err) {
         console.error('Magic link processing error:', err);
-        setErrorMessage('An unexpected error occurred during verification. Please try again.');
       }
     };
 
     handleMagicLink();
 
+    const checkmarkTimer = setTimeout(() => setShowCheckmark(true), 1000);
     const redirectTimer = setTimeout(() => {
       setShowModal(false);
       navigate('/login', { replace: true });
     }, 2500);
 
-    return () => clearTimeout(redirectTimer);
+    return () => {
+      clearTimeout(checkmarkTimer);
+      clearTimeout(redirectTimer);
+    };
   }, [navigate, location]);
 
   return (
@@ -75,47 +65,32 @@ const ConfirmMagicLink = () => {
             }}
           >
             <h3 className="text-xl sm:text-2xl font-bold text-center text-black mb-4">
-              {errorMessage ? 'Verification Error' : 'Verification in Progress'}
+              Verification in Progress
             </h3>
             <p className="text-center text-gray-600 mb-6 text-sm sm:text-base">
-              {errorMessage
-                ? errorMessage
-                : showCheckmark
-                  ? 'Congratulations, your account has been verified, please login your account!'
-                  : 'Verifying your account...'}
+              {showCheckmark
+                ? 'Congratulations, your account has been verified, please login your account!'
+                : 'Verifying your account...'}
             </p>
             <div className="flex justify-center">
-              {errorMessage ? (
+              {showCheckmark ? (
                 <svg
-                  className="w-10 sm:w-12 h-10 sm:h-12 text-red-500"
+                  className="w-10 sm:w-12 h-10 sm:h-12 text-green-500"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                 </svg>
               ) : (
-                <>
-                  {showCheckmark ? (
-                    <svg
-                      className="w-10 sm:w-12 h-10 sm:h-12 text-green-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="w-10 sm:w-12 h-10 sm:h-12 text-blue-400 animate-spin"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 0116 0 8 8 0 01-16 0" />
-                    </svg>
-                  )}
-                </>
+                <svg
+                  className="w-10 sm:w-12 h-10 sm:h-12 text-blue-400 animate-spin"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 0116 0 8 8 0 01-16 0" />
+                </svg>
               )}
             </div>
           </div>
