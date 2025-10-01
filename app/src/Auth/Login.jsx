@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -17,46 +17,25 @@ const Login = () => {
   const [showCheckmark, setShowCheckmark] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     console.log('Login component mounted');
     setTimeout(() => setIsVisible(true), 100);
-
-    // Handle email confirmation redirect
-    const hashParams = new URLSearchParams(location.hash.substring(1));
-    const access_token = hashParams.get('access_token');
-    const type = hashParams.get('type');
-
-    if (access_token && type === 'signup') {
-      supabase.auth.setSession({ access_token }).then(({ error }) => {
-        if (error) {
-          console.error('Email confirmation error:', error.message);
-          setErrorMessage('Failed to confirm email');
-          setShowErrorModal(true);
-        } else {
-          setErrorMessage('Email confirmed! Please log in.');
-          setShowSuccessModal(true);
-        }
-      });
-    }
-  }, [location]);
+  }, []);
 
   useEffect(() => {
     if (showSuccessModal) {
       const checkmarkTimer = setTimeout(() => setShowCheckmark(true), 1000);
       const closeTimer = setTimeout(() => {
         setShowSuccessModal(false);
-        if (!errorMessage.includes('Email confirmed')) {
-          navigate('/#home');
-        }
+        navigate('/#home');
       }, 2500);
       return () => {
         clearTimeout(checkmarkTimer);
         clearTimeout(closeTimer);
       };
     }
-  }, [showSuccessModal, navigate, errorMessage]);
+  }, [showSuccessModal, navigate]);
 
   useEffect(() => {
     if (showErrorModal || showNotRegisteredModal) {
@@ -209,10 +188,10 @@ const Login = () => {
             }}
           >
             <h3 className="text-xl sm:text-2xl font-bold text-center text-black mb-4">
-              {errorMessage.includes('Email confirmed') ? 'Email Confirmed' : 'Login in Progress'}
+              Login in Progress
             </h3>
             <p className="text-center text-gray-600 mb-6 text-sm sm:text-base">
-              {errorMessage.includes('Email confirmed') ? errorMessage : (showCheckmark ? 'Login successful, welcome back!' : 'Logging you in...')}
+              {showCheckmark ? 'Login successful, welcome back!' : 'Logging you in...'}
             </p>
             <div className="flex justify-center">
               {showCheckmark ? (
