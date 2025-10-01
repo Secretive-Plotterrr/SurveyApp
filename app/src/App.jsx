@@ -59,7 +59,7 @@ function App() {
     location.pathname === '/survey2' ||
     location.pathname === '/ResultTest';
 
-  console.log('Current route:', location.pathname); // Debug route
+  console.log('Current route:', location.pathname);
 
   return (
     <>
@@ -81,7 +81,7 @@ function App() {
         />
         <Route
           path="/ResultRecord1"
-          element={<ResultRecord />} // Removed redundant <Footer />
+          element={<ResultRecord />}
         />
         <Route path="/survey1" element={<Survey1 />} />
         <Route path="/survey2" element={<Survey2 />} />

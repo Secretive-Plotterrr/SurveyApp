@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://surveyapp-3-mj3e.onrender.com'; // Updated default to Render URL
+const API_URL = process.env.REACT_APP_API_URL || 'https://surveyapp-3-mj3e.onrender.com';
 
 export const signUp = async (email, password) => {
   try {

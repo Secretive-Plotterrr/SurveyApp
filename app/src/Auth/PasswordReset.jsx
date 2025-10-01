@@ -23,7 +23,6 @@ const PasswordReset = () => {
   useEffect(() => {
     setTimeout(() => setIsVisible(true), 100);
 
-    // Extract token from URL hash (Supabase recovery link format)
     const hashParams = new URLSearchParams(location.hash.substring(1));
     const accessToken = hashParams.get('access_token');
     const type = hashParams.get('type');
@@ -111,7 +110,6 @@ const PasswordReset = () => {
     }
 
     try {
-      // Verify the recovery token and set session
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type: 'recovery',
@@ -124,7 +122,6 @@ const PasswordReset = () => {
         return;
       }
 
-      // Update password
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       });
@@ -201,7 +198,7 @@ const PasswordReset = () => {
                     id="confirmPassword"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="mt-2 block w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400 text-sm sm:text-base"
+                    className="mt-2 block w/full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400 text-sm sm:text-base"
                     placeholder="Confirm new password"
                     required
                   />
