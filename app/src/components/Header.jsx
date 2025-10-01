@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import Loading3 from './Loading3';
@@ -27,23 +27,37 @@ const Header = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showLogoutCheckmark, setShowLogoutCheckmark] = useState(false);
-  const [isVisible, setIsVisible] = useState(false); // State for animation
+  const [isVisible, setIsVisible] = useState(false);
+  const headerRef = useRef(null);
+  const menuRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Trigger fade-in animation on mount
   useEffect(() => {
     if (location.pathname !== '/login') {
       setIsVisible(true);
     }
   }, [location.pathname]);
 
-  const isResultPage = location.pathname === '/ResultRecord1';
-  const displayedNavItems = isResultPage
-    ? navItems.filter((item) => item.id === '/ResultRecord1')
-    : navItems;
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        isOpen &&
+        headerRef.current &&
+        menuRef.current &&
+        !headerRef.current.contains(event.target) &&
+        !menuRef.current.contains(event.target)
+      ) {
+        setIsOpen(false);
+      }
+    };
 
-  // Fetch and monitor user session
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     const fetchUser = async () => {
       setIsUserLoading(true);
@@ -215,6 +229,7 @@ const Header = () => {
       {isLoadingResult && <Loading3 />}
       {isLoadingLogin && <Loading />}
       <header
+        ref={headerRef}
         className={`fixed w-full bg-white shadow-md z-50 ${
           isLoadingResult || isLoadingLogin || location.pathname === '/login' ? 'opacity-0' : 'opacity-100 transition-opacity duration-50 ease-in'
         }`}
@@ -233,9 +248,8 @@ const Header = () => {
               </a>
             </div>
 
-            {/* Desktop Nav */}
             <div className="hidden xl:flex items-center space-x-8">
-              {displayedNavItems.map((item) => (
+              {navItems.map((item) => (
                 <a
                   key={item.id}
                   href={item.id}
@@ -251,7 +265,7 @@ const Header = () => {
                 </a>
               ))}
               {isUserLoading ? (
-                <div className="w-10 h-10"></div> // Empty placeholder to prevent layout shift
+                <div className="w-10 h-10"></div>
               ) : user ? (
                 <div className="relative">
                   <button
@@ -283,7 +297,6 @@ const Header = () => {
               )}
             </div>
 
-            {/* Mobile Nav Button */}
             <div className="xl:hidden flex items-center">
               <button
                 onClick={() => setIsOpen(!isOpen)}
@@ -302,10 +315,12 @@ const Header = () => {
             </div>
           </div>
 
-          {/* Mobile Dropdown */}
           {isOpen && (
-            <div className="xl:hidden bg-white shadow-md absolute top-16 right-4 w-48 max-w-[90vw] rounded-md py-2 overflow-hidden">
-              {displayedNavItems.map((item) => (
+            <div
+              ref={menuRef}
+              className="xl:hidden bg-white shadow-md absolute top-16 right-4 w-48 max-w-[90vw] rounded-md py-2 overflow-hidden"
+            >
+              {navItems.map((item) => (
                 <a
                   key={item.id}
                   href={item.id}
@@ -318,7 +333,7 @@ const Header = () => {
                 </a>
               ))}
               {isUserLoading ? (
-                <div className="px-4 py-2"></div> // Empty placeholder to prevent layout shift
+                <div className="px-4 py-2"></div>
               ) : user ? (
                 <>
                   <div className="px-4 py-2 text-gray-600 border-b truncate">{user.email}</div>

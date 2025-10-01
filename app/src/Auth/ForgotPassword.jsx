@@ -10,9 +10,11 @@ const supabase = createClient(
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [showCheckmark, setShowCheckmark] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [countdown, setCountdown] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,31 +36,59 @@ const ForgotPassword = () => {
     }
   }, [showModal, navigate]);
 
+  useEffect(() => {
+    if (showErrorModal && countdown !== null) {
+      const timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setShowErrorModal(false);
+            setErrorMessage('');
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [showErrorModal, countdown]);
+
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setErrorMessage('');
+    setCountdown(null);
 
     if (!email) {
       setErrorMessage('Please enter your email address.');
+      setShowErrorModal(true);
       return;
     }
 
     try {
-      // Dynamic redirectTo: Uses current origin (localhost in dev, Vercel URL in prod)
       const frontendUrl = process.env.REACT_APP_FRONTEND_URL || window.location.origin;
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${frontendUrl}/reset-password`, // Redirects to /reset-password after email click
+        redirectTo: `${frontendUrl}/reset-password`,
       });
 
       if (error) {
-        throw new Error(error.message || 'Failed to send password reset email');
+        if (error.message.includes('For security purposes, you can only request this after')) {
+          const seconds = error.message.match(/after (\d+) seconds/)?.[1];
+          setCountdown(seconds ? parseInt(seconds, 10) : 60);
+          setErrorMessage(`For security purposes, please wait ${seconds || 60} seconds before trying again.`);
+          setShowErrorModal(true);
+        } else {
+          setErrorMessage(error.message || 'Failed to send reset email. Please try again.');
+          setShowErrorModal(true);
+        }
+        return;
       }
 
       setShowModal(true);
-      setErrorMessage(''); // Clear any prior errors
+      setErrorMessage('');
     } catch (error) {
       console.error('Password reset error:', error);
       setErrorMessage(error.message || 'Failed to send reset email. Please try again.');
+      setShowErrorModal(true);
     }
   };
 
@@ -109,11 +139,6 @@ const ForgotPassword = () => {
                 Back to Login
               </button>
             </div>
-            {errorMessage && (
-              <div className="text-center mt-4">
-                <p className="text-red-500 text-sm">{errorMessage}</p>
-              </div>
-            )}
           </form>
         </div>
         <div className="hidden md:block w-full md:w-1/2 mt-6 md:mt-0">
@@ -164,11 +189,38 @@ const ForgotPassword = () => {
           </div>
         </div>
       )}
+      {showErrorModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
+          <div
+            className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full transform transition-all ease-out duration-300"
+            style={{
+              transform: showErrorModal ? 'scale(1)' : 'scale(0.9)',
+              opacity: showErrorModal ? 1 : 0,
+            }}
+          >
+            <h3 className="text-xl sm:text-2xl font-bold text-center text-red-500 mb-4">
+              Error
+            </h3>
+            <p className="text-center text-gray-600 mb-6 text-sm sm:text-base">
+              {countdown !== null ? `For security purposes, please wait ${countdown} seconds before trying again.` : errorMessage}
+            </p>
+            <div className="flex justify-center">
+              <svg
+                className="w-10 sm:w-12 h-10 sm:h-12 text-red-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
-// Error Boundary (unchanged)
 class ForgotPasswordWithErrorBoundary extends React.Component {
   state = { hasError: false, error: null };
 
