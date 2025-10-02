@@ -16,7 +16,7 @@ const PasswordReset = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [showCheckmark, setShowCheckmark] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [tokenHash, setTokenHash] = useState('');
+  const [isRecoveryMode, setIsRecoveryMode] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -24,21 +24,41 @@ const PasswordReset = () => {
     setTimeout(() => setIsVisible(true), 100);
 
     const hashParams = new URLSearchParams(location.hash.substring(1));
-    const accessToken = hashParams.get('access_token');
+    const access_token = hashParams.get('access_token');
+    const refresh_token = hashParams.get('refresh_token');
     const type = hashParams.get('type');
 
     console.log('URL hash params:', {
-      accessToken,
+      access_token,
+      refresh_token,
       type,
       fullHash: location.hash,
       fullUrl: window.location.href,
     });
 
-    if (accessToken && type === 'recovery') {
-      setTokenHash(accessToken);
-      console.log('Password reset token detected:', accessToken);
+    if (access_token && refresh_token && type === 'recovery') {
+      console.log('Password reset tokens detected:', { access_token, refresh_token });
+      supabase.auth
+        .setSession({ access_token, refresh_token })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('setSession error:', error);
+            setErrorMessage('Invalid or expired reset link. Please request a new one.');
+            setShowErrorModal(true);
+          } else {
+            console.log('Session set successfully');
+            setIsRecoveryMode(true);
+            // Clear the hash to prevent issues on reload
+            window.location.hash = '';
+          }
+        })
+        .catch((err) => {
+          console.error('Unexpected error setting session:', err);
+          setErrorMessage('An unexpected error occurred. Please try again.');
+          setShowErrorModal(true);
+        });
     } else {
-      console.warn('No valid recovery token found in URL:', { accessToken, type });
+      console.warn('No valid recovery tokens found in URL:', { access_token, refresh_token, type });
       setErrorMessage('Invalid or missing reset link. Please request a new password reset email.');
       setShowErrorModal(true);
     }
@@ -72,7 +92,7 @@ const PasswordReset = () => {
     e.preventDefault();
     setErrorMessage('');
 
-    if (!tokenHash) {
+    if (!isRecoveryMode) {
       if (!email) {
         setErrorMessage('Please enter your email.');
         setShowErrorModal(true);
@@ -122,20 +142,7 @@ const PasswordReset = () => {
     }
 
     try {
-      console.log('Attempting to verify OTP with token:', tokenHash);
-      const { data, error: verifyError } = await supabase.auth.verifyOtp({
-        token_hash: tokenHash,
-        type: 'recovery',
-      });
-
-      if (verifyError || !data.session) {
-        console.error('Supabase verifyOtp error:', verifyError?.message, verifyError);
-        setErrorMessage(verifyError?.message || 'Invalid or expired reset token');
-        setShowErrorModal(true);
-        return;
-      }
-
-      console.log('OTP verified, updating password for user:', data.user?.id);
+      console.log('Updating password');
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       });
@@ -169,10 +176,10 @@ const PasswordReset = () => {
             Know<span className="text-blue-400">You</span>
           </h2>
           <p className="text-center text-gray-500 mb-6 sm:mb-8 text-base sm:text-lg">
-            {tokenHash ? 'Enter your new password.' : 'Enter your email to receive a password reset link.'}
+            {isRecoveryMode ? 'Enter your new password.' : 'Enter your email to receive a password reset link.'}
           </p>
           <form onSubmit={handleResetPassword} className="space-y-5 sm:space-y-6">
-            {!tokenHash && (
+            {!isRecoveryMode && (
               <div>
                 <label htmlFor="email" className="block text-sm font-semibold text-black">
                   Email
@@ -188,7 +195,7 @@ const PasswordReset = () => {
                 />
               </div>
             )}
-            {tokenHash && (
+            {isRecoveryMode && (
               <>
                 <div>
                   <label htmlFor="password" className="block text-sm font-semibold text-black">
@@ -226,7 +233,7 @@ const PasswordReset = () => {
                 disabled={showSuccessModal}
                 className="w-full sm:w-2/3 bg-blue-400 text-white p-3 rounded-lg hover:bg-blue-500 transition-colors font-semibold text-sm sm:text-base transform hover:scale-105 disabled:bg-blue-300 disabled:cursor-not-allowed"
               >
-                {tokenHash ? 'Confirm Reset' : 'Send Reset Email'}
+                {isRecoveryMode ? 'Confirm Reset' : 'Send Reset Email'}
               </button>
             </div>
             <div className="flex justify-center text-sm mt-3">
@@ -259,10 +266,10 @@ const PasswordReset = () => {
             }}
           >
             <h3 className="text-xl sm:text-2xl font-bold text-center text-black mb-4">
-              {tokenHash ? 'Password Reset Successful' : 'Reset Email Sent'}
+              {isRecoveryMode ? 'Password Reset Successful' : 'Reset Email Sent'}
             </h3>
             <p className="text-center text-gray-600 mb-6 text-sm sm:text-base">
-              {tokenHash ? 'You can now log in with your new password.' : 'Check your email (and spam folder) for a reset link.'}
+              {isRecoveryMode ? 'You can now log in with your new password.' : 'Check your email (and spam folder) for a reset link.'}
             </p>
             <div className="flex justify-center">
               {showCheckmark ? (
