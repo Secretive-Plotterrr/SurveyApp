@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import supabase from './supabase'; // Import shared client
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.REACT_APP_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_ANON_KEY
+);
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
@@ -37,14 +42,20 @@ const ForgotPassword = () => {
         setCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(countdownTimer);
-            setShowErrorModal(false);
-            setErrorMessage('');
             return null;
           }
           return prev - 1;
         });
       }, 1000);
-      return () => clearInterval(countdownTimer);
+      const closeTimer = setTimeout(() => {
+        setShowErrorModal(false);
+        setErrorMessage('');
+        setCountdown(null);
+      }, 2500);
+      return () => {
+        clearInterval(countdownTimer);
+        clearTimeout(closeTimer);
+      };
     }
   }, [showErrorModal, countdown]);
 

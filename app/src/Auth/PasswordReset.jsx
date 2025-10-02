@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import supabase from './supabase'; // Import shared client
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.REACT_APP_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_ANON_KEY
+);
 
 const PasswordReset = () => {
   const [email, setEmail] = useState('');
@@ -37,7 +42,7 @@ const PasswordReset = () => {
       setErrorMessage('Invalid or missing reset link. Please request a new password reset email.');
       setShowErrorModal(true);
     }
-  }, [location.hash]); // Only run when location.hash changes
+  }, [location]);
 
   useEffect(() => {
     if (showSuccessModal) {
@@ -117,20 +122,18 @@ const PasswordReset = () => {
     }
 
     try {
-      console.log('Verifying OTP with token:', tokenHash);
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type: 'recovery',
       });
 
       if (verifyError || !data.session) {
-        console.error('Supabase verifyOtp error:', verifyError?.message, verifyError);
+        console.error('Supabase verifyOtp error:', verifyError?.message);
         setErrorMessage(verifyError?.message || 'Invalid or expired reset token');
         setShowErrorModal(true);
         return;
       }
 
-      console.log('OTP verified successfully:', data);
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       });
@@ -142,7 +145,6 @@ const PasswordReset = () => {
         return;
       }
 
-      console.log('Password updated successfully');
       setShowSuccessModal(true);
       setErrorMessage('');
     } catch (error) {
