@@ -44,8 +44,7 @@ const PasswordReset = () => {
         .then(({ data, error }) => {
           if (error) {
             console.error('setSession error:', error);
-            setErrorMessage('Invalid or expired reset link. Please request a new one.');
-            setShowErrorModal(true);
+            setIsRecoveryMode(false); // Stay on email input form
           } else {
             console.log('Session set successfully');
             setIsRecoveryMode(true);
@@ -54,13 +53,11 @@ const PasswordReset = () => {
         })
         .catch((err) => {
           console.error('Unexpected error setting session:', err);
-          setErrorMessage('An unexpected error occurred. Please try again.');
-          setShowErrorModal(true);
+          setIsRecoveryMode(false); // Stay on email input form
         });
     } else {
       console.warn('No valid recovery tokens found in URL:', { access_token, refresh_token, type });
-      setErrorMessage('Invalid or missing reset link. Please request a new password reset email.');
-      setShowErrorModal(true);
+      setIsRecoveryMode(false); // Stay on email input form
     }
   }, [location]);
 
