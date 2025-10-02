@@ -63,7 +63,7 @@ const PasswordReset = () => {
       const closeTimer = setTimeout(() => {
         setShowErrorModal(false);
         setErrorMessage('');
-      }, 1500);
+      }, 2500);
       return () => clearTimeout(closeTimer);
     }
   }, [showErrorModal]);
@@ -122,18 +122,20 @@ const PasswordReset = () => {
     }
 
     try {
+      console.log('Attempting to verify OTP with token:', tokenHash);
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         token_hash: tokenHash,
         type: 'recovery',
       });
 
       if (verifyError || !data.session) {
-        console.error('Supabase verifyOtp error:', verifyError?.message);
+        console.error('Supabase verifyOtp error:', verifyError?.message, verifyError);
         setErrorMessage(verifyError?.message || 'Invalid or expired reset token');
         setShowErrorModal(true);
         return;
       }
 
+      console.log('OTP verified, updating password for user:', data.user?.id);
       const { error: updateError } = await supabase.auth.updateUser({
         password,
       });
@@ -145,10 +147,11 @@ const PasswordReset = () => {
         return;
       }
 
+      console.log('Password reset successful');
       setShowSuccessModal(true);
       setErrorMessage('');
     } catch (error) {
-      console.error('Unexpected password reset error:', error.message);
+      console.error('Unexpected password reset error:', error.message, error);
       setErrorMessage(error.message || 'An unexpected error occurred');
       setShowErrorModal(true);
     }

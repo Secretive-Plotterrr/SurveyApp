@@ -37,26 +37,23 @@ const ForgotPassword = () => {
   }, [showModal, navigate]);
 
   useEffect(() => {
+    let countdownTimer;
     if (showErrorModal && countdown !== null) {
-      const countdownTimer = setInterval(() => {
+      countdownTimer = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(countdownTimer);
+            setShowErrorModal(false);
+            setErrorMessage('');
             return null;
           }
           return prev - 1;
         });
       }, 1000);
-      const closeTimer = setTimeout(() => {
-        setShowErrorModal(false);
-        setErrorMessage('');
-        setCountdown(null);
-      }, 2500);
-      return () => {
-        clearInterval(countdownTimer);
-        clearTimeout(closeTimer);
-      };
     }
+    return () => {
+      if (countdownTimer) clearInterval(countdownTimer);
+    };
   }, [showErrorModal, countdown]);
 
   const handleResetPassword = async (e) => {
@@ -81,8 +78,9 @@ const ForgotPassword = () => {
         console.error('Supabase reset error:', error);
         if (error.message.includes('For security purposes, you can only request this after')) {
           const seconds = error.message.match(/after (\d+) seconds/)?.[1];
-          setCountdown(seconds ? parseInt(seconds, 10) : 60);
-          setErrorMessage(`Please wait ${seconds || 60} seconds before trying again.`);
+          const countdownSeconds = seconds ? parseInt(seconds, 10) : 60;
+          setCountdown(countdownSeconds);
+          setErrorMessage(`Please wait ${countdownSeconds} seconds before trying again.`);
           setShowErrorModal(true);
         } else {
           setErrorMessage(error.message || 'Failed to send reset email. Please try again.');
