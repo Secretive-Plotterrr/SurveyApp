@@ -96,20 +96,8 @@ const Header = () => {
     if (sectionId === '/ResultRecord1') {
       setIsLoadingResult(true);
       setTimeout(() => {
-        if (sectionId.startsWith('#')) {
-          if (location.pathname !== '/') {
-            navigate(`/${sectionId}`);
-          } else {
-            const section = document.querySelector(sectionId);
-            if (section) {
-              section.scrollIntoView({ behavior: 'smooth' });
-            }
-          }
-          setActiveSection(sectionId);
-        } else {
-          navigate(sectionId);
-          setActiveSection(sectionId);
-        }
+        navigate(sectionId);
+        setActiveSection(sectionId);
         setIsLoadingResult(false);
         setIsOpen(false);
       }, 2500);
@@ -172,7 +160,11 @@ const Header = () => {
         setShowLogoutModal(false);
         setShowUserMenu(false);
         setIsOpen(false);
-        navigate('/#home');
+        if (location.pathname === '/ResultRecord1') {
+          window.location.reload();
+        } else {
+          navigate('/#home');
+        }
       }, Math.max(0, 2000 - elapsed));
     } catch (error) {
       console.error('Logout error:', error);
@@ -224,6 +216,8 @@ const Header = () => {
     };
   }, [location.pathname, location.hash]);
 
+  const isResultPage = location.pathname === '/ResultRecord1';
+
   return (
     <>
       {isLoadingResult && <Loading3 />}
@@ -250,19 +244,21 @@ const Header = () => {
 
             <div className="hidden xl:flex items-center space-x-8">
               {navItems.map((item) => (
-                <a
-                  key={item.id}
-                  href={item.id}
-                  onClick={(e) => handleNavClick(e, item.id)}
-                  className={`text-gray-600 hover:text-gray-900 transition-colors cursor-pointer relative ${
-                    activeSection === item.id ? 'text-gray-900' : ''
-                  }`}
-                >
-                  {item.label}
-                  {activeSection === item.id && (
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-900" />
-                  )}
-                </a>
+                (!isResultPage || item.id === '/ResultRecord1') && (
+                  <a
+                    key={item.id}
+                    href={item.id}
+                    onClick={(e) => handleNavClick(e, item.id)}
+                    className={`text-gray-600 hover:text-gray-900 transition-colors cursor-pointer relative ${
+                      activeSection === item.id ? 'text-gray-900' : ''
+                    }`}
+                  >
+                    {item.label}
+                    {activeSection === item.id && (
+                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-900" />
+                    )}
+                  </a>
+                )
               ))}
               {isUserLoading ? (
                 <div className="w-10 h-10"></div>
@@ -321,16 +317,18 @@ const Header = () => {
               className="xl:hidden bg-white shadow-md absolute top-16 right-4 w-48 max-w-[90vw] rounded-md py-2 overflow-hidden"
             >
               {navItems.map((item) => (
-                <a
-                  key={item.id}
-                  href={item.id}
-                  onClick={(e) => handleNavClick(e, item.id)}
-                  className={`block px-4 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors cursor-pointer relative ${
-                    activeSection === item.id ? 'text-gray-900' : ''
-                  }`}
-                >
-                  {item.label}
-                </a>
+                (!isResultPage || item.id === '/ResultRecord1') && (
+                  <a
+                    key={item.id}
+                    href={item.id}
+                    onClick={(e) => handleNavClick(e, item.id)}
+                    className={`block px-4 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors cursor-pointer relative ${
+                      activeSection === item.id ? 'text-gray-900' : ''
+                    }`}
+                  >
+                    {item.label}
+                  </a>
+                )
               ))}
               {isUserLoading ? (
                 <div className="px-4 py-2"></div>

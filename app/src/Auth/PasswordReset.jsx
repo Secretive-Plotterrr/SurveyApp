@@ -17,6 +17,7 @@ const PasswordReset = () => {
   const [showCheckmark, setShowCheckmark] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+  const [isOldPassword, setIsOldPassword] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -43,26 +44,21 @@ const PasswordReset = () => {
         .then(({ data, error }) => {
           if (error) {
             console.error('setSession error:', error);
-            setErrorMessage('Invalid or expired reset link. Please request a new one.');
-            setShowErrorModal(true);
+            navigate('/forgot-password');
           } else {
             console.log('Session set successfully');
             setIsRecoveryMode(true);
-            // Clear the hash to prevent issues on reload
             window.location.hash = '';
           }
         })
         .catch((err) => {
           console.error('Unexpected error setting session:', err);
-          setErrorMessage('An unexpected error occurred. Please try again.');
-          setShowErrorModal(true);
+          navigate('/forgot-password');
         });
     } else {
-      console.warn('No valid recovery tokens found in URL:', { access_token, refresh_token, type });
-      setErrorMessage('Invalid or missing reset link. Please request a new password reset email.');
-      setShowErrorModal(true);
+      navigate('/forgot-password');
     }
-  }, [location]);
+  }, [location, navigate]);
 
   useEffect(() => {
     if (showSuccessModal) {
@@ -87,6 +83,34 @@ const PasswordReset = () => {
       return () => clearTimeout(closeTimer);
     }
   }, [showErrorModal]);
+
+  const checkOldPassword = async (newPassword) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: newPassword,
+      });
+
+      return !error;
+    } catch (error) {
+      console.error('Error checking old password:', error);
+      return false;
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    if (newPassword.length >= 8) {
+      const isOld = await checkOldPassword(newPassword);
+      setIsOldPassword(isOld);
+    } else {
+      setIsOldPassword(false);
+    }
+  };
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
@@ -137,6 +161,12 @@ const PasswordReset = () => {
 
     if (password.length < 8) {
       setErrorMessage('Password must be at least 8 characters long.');
+      setShowErrorModal(true);
+      return;
+    }
+
+    if (isOldPassword) {
+      setErrorMessage('You cannot use your old password. Please choose a new one.');
       setShowErrorModal(true);
       return;
     }
@@ -205,11 +235,14 @@ const PasswordReset = () => {
                     type="password"
                     id="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="mt-2 block w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400 text-sm sm:text-base"
+                    onChange={handlePasswordChange}
+                    className={`mt-2 block w-full p-3 border ${isOldPassword ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400 text-sm sm:text-base`}
                     placeholder="Enter new password"
                     required
                   />
+                  {isOldPassword && (
+                    <p className="mt-1 text-sm text-red-500">You cannot use your old password.</p>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-semibold text-black">
