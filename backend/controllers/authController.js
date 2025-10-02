@@ -108,6 +108,7 @@ const sendResetPassword = async (req, res, next) => {
     }
 
     const normalizedEmail = email.toLowerCase();
+    console.log('Sending reset email with redirectTo:', `${process.env.FRONTEND_URL}/reset-password`);
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: `${process.env.FRONTEND_URL}/reset-password`,
     });

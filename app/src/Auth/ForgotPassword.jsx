@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  'https://njodostonkvbovcgrayz.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qb2Rvc3Rvbmt2Ym92Y2dyYXl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3OTc1MjcsImV4cCI6MjA3NDM3MzUyN30.3PAIczMstQ0UjtN260KMV5-VG56EtO9Cc5gkyIN2tTA'
+  process.env.REACT_APP_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_ANON_KEY
 );
 
 const ForgotPassword = () => {
@@ -37,26 +37,23 @@ const ForgotPassword = () => {
   }, [showModal, navigate]);
 
   useEffect(() => {
-    if (showErrorModal) {
-      let countdownTimer;
-      if (countdown !== null) {
-        countdownTimer = setInterval(() => {
-          setCountdown((prev) => {
-            if (prev <= 1) {
-              clearInterval(countdownTimer);
-              return null;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-      }
+    if (showErrorModal && countdown !== null) {
+      const countdownTimer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownTimer);
+            return null;
+          }
+          return prev - 1;
+        });
+      }, 1000);
       const closeTimer = setTimeout(() => {
         setShowErrorModal(false);
         setErrorMessage('');
         setCountdown(null);
       }, 2500);
       return () => {
-        if (countdownTimer) clearInterval(countdownTimer);
+        clearInterval(countdownTimer);
         clearTimeout(closeTimer);
       };
     }
@@ -75,15 +72,17 @@ const ForgotPassword = () => {
 
     try {
       const frontendUrl = process.env.REACT_APP_FRONTEND_URL || window.location.origin;
+      console.log('Sending reset email with redirectTo:', `${frontendUrl}/reset-password`);
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${frontendUrl}/reset-password`,
       });
 
       if (error) {
+        console.error('Supabase reset error:', error);
         if (error.message.includes('For security purposes, you can only request this after')) {
           const seconds = error.message.match(/after (\d+) seconds/)?.[1];
           setCountdown(seconds ? parseInt(seconds, 10) : 60);
-          setErrorMessage(`For security purposes, please wait ${seconds || 60} seconds before trying again.`);
+          setErrorMessage(`Please wait ${seconds || 60} seconds before trying again.`);
           setShowErrorModal(true);
         } else {
           setErrorMessage(error.message || 'Failed to send reset email. Please try again.');
@@ -211,7 +210,7 @@ const ForgotPassword = () => {
               Error
             </h3>
             <p className="text-center text-gray-600 mb-6 text-sm sm:text-base">
-              {countdown !== null ? `For security purposes, please wait ${countdown} seconds before trying again.` : errorMessage}
+              {countdown !== null ? `Please wait ${countdown} seconds before trying again.` : errorMessage}
             </p>
             <div className="flex justify-center">
               <svg

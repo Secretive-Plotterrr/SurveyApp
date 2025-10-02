@@ -3,8 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
-  'https://njodostonkvbovcgrayz.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5qb2Rvc3Rvbmt2Ym92Y2dyYXl6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3OTc1MjcsImV4cCI6MjA3NDM3MzUyN30.3PAIczMstQ0UjtN260KMV5-VG56EtO9Cc5gkyIN2tTA'
+  process.env.REACT_APP_SUPABASE_URL,
+  process.env.REACT_APP_SUPABASE_ANON_KEY
 );
 
 const PasswordReset = () => {
@@ -27,13 +27,18 @@ const PasswordReset = () => {
     const accessToken = hashParams.get('access_token');
     const type = hashParams.get('type');
 
-    console.log('URL hash params:', { accessToken, type, fullHash: location.hash, fullUrl: window.location.href });
+    console.log('URL hash params:', {
+      accessToken,
+      type,
+      fullHash: location.hash,
+      fullUrl: window.location.href,
+    });
 
     if (accessToken && type === 'recovery') {
       setTokenHash(accessToken);
       console.log('Password reset token detected:', accessToken);
     } else {
-      console.warn('No valid recovery token found in URL');
+      console.warn('No valid recovery token found in URL:', { accessToken, type });
       setErrorMessage('Invalid or missing reset link. Please request a new password reset email.');
       setShowErrorModal(true);
     }
@@ -76,6 +81,7 @@ const PasswordReset = () => {
 
       try {
         const frontendUrl = process.env.REACT_APP_FRONTEND_URL || window.location.origin;
+        console.log('Sending reset email with redirectTo:', `${frontendUrl}/reset-password`);
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: `${frontendUrl}/reset-password`,
         });
@@ -105,6 +111,12 @@ const PasswordReset = () => {
 
     if (password !== confirmPassword) {
       setErrorMessage('Passwords do not match.');
+      setShowErrorModal(true);
+      return;
+    }
+
+    if (password.length < 8) {
+      setErrorMessage('Password must be at least 8 characters long.');
       setShowErrorModal(true);
       return;
     }
@@ -198,7 +210,7 @@ const PasswordReset = () => {
                     id="confirmPassword"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="mt-2 block w/full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400 text-sm sm:text-base"
+                    className="mt-2 block w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400 text-sm sm:text-base"
                     placeholder="Confirm new password"
                     required
                   />
