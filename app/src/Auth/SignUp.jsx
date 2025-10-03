@@ -11,6 +11,10 @@ const SignUp = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [showCheckmark, setShowCheckmark] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [hasLowercase, setHasLowercase] = useState(false);
+  const [hasUppercase, setHasUppercase] = useState(false);
+  const [hasNumber, setHasNumber] = useState(false);
+  const [isLongEnough, setIsLongEnough] = useState(false);
   const navigate = useNavigate();
 
   console.log('API URL:', process.env.REACT_APP_API_URL); // Debug log
@@ -18,6 +22,16 @@ const SignUp = () => {
   useEffect(() => {
     setTimeout(() => setIsVisible(true), 100);
   }, []);
+
+  useEffect(() => {
+    // Validate password requirements
+    setHasLowercase(/.+/.test(password) && /[a-z]/.test(password));
+    setHasUppercase(/.+/.test(password) && /[A-Z]/.test(password));
+    setHasNumber(/.+/.test(password) && /\d/.test(password));
+    setIsLongEnough(password.length >= 8);
+  }, [password]);
+
+  const isValidPassword = hasLowercase && hasUppercase && hasNumber && isLongEnough;
 
   useEffect(() => {
     if (showSuccessModal) {
@@ -49,6 +63,12 @@ const SignUp = () => {
 
     if (!email || !password) {
       setErrorMessage('Please fill in both email and password fields.');
+      setShowErrorModal(true);
+      return;
+    }
+
+    if (!isValidPassword) {
+      setErrorMessage('Password must meet all strength requirements.');
       setShowErrorModal(true);
       return;
     }
@@ -105,11 +125,71 @@ const SignUp = () => {
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-2 block w-full min-w-0 p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400"
+                className={`mt-2 block w-full min-w-0 p-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 text-black placeholder-gray-400 ${
+                  password.length > 0
+                    ? isValidPassword
+                      ? 'border-green-400 focus:ring-green-400 focus:border-green-400'
+                      : 'border-red-400 focus:ring-red-400 focus:border-red-400'
+                    : 'border-gray-200 focus:ring-blue-400 focus:border-blue-400'
+                }`}
                 placeholder="Enter your password"
                 required
                 disabled={isLoading}
               />
+              {password.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  <div className={`flex items-center text-xs ${isValidPassword ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={`w-2 h-2 rounded-full mr-2 ${isValidPassword ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                    {isValidPassword ? 'Strong password' : 'Password is too weak'}
+                  </div>
+                  <div className="text-xs text-gray-500 space-y-1">
+                    <div className="flex items-center">
+                      <svg
+                        className={`w-3 h-3 mr-1 ${hasLowercase ? 'text-green-500' : 'text-gray-400'}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      At least one lowercase letter
+                    </div>
+                    <div className="flex items-center">
+                      <svg
+                        className={`w-3 h-3 mr-1 ${hasUppercase ? 'text-green-500' : 'text-gray-400'}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      At least one uppercase letter
+                    </div>
+                    <div className="flex items-center">
+                      <svg
+                        className={`w-3 h-3 mr-1 ${hasNumber ? 'text-green-500' : 'text-gray-400'}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      At least one number
+                    </div>
+                    <div className="flex items-center">
+                      <svg
+                        className={`w-3 h-3 mr-1 ${isLongEnough ? 'text-green-500' : 'text-gray-400'}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                      </svg>
+                      At least 8 characters
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex items-center justify-between text-sm">
               <button
@@ -124,10 +204,12 @@ const SignUp = () => {
             <div className="flex justify-center">
               <button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || !isValidPassword}
                 className={`w-1/2 text-white p-3 rounded-lg transition-all font-semibold flex items-center justify-center ${
                   isLoading
                     ? 'bg-gray-400 cursor-not-allowed'
+                    : !isValidPassword
+                    ? 'bg-gray-300 cursor-not-allowed'
                     : 'bg-blue-400 hover:bg-blue-500 transform hover:scale-105'
                 }`}
               >
