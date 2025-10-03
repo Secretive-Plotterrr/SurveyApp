@@ -50,8 +50,28 @@ const generateResponse = async (req, res, next) => {
     const selfEfficacyLevel = getLevel(selfEfficacyScore);
     const goalOrientationLevel = getLevel(goalOrientationScore);
 
-    const prompt = `You are a helpful assistant for the KnowYou Survey App. The user completed a self-efficacy survey (score: ${selfEfficacyScore}/40, level: ${selfEfficacyLevel}) and a goal orientation survey (score: ${goalOrientationScore}/40, level: ${goalOrientationLevel}). Respond to their question about their results in a supportive, encouraging, and insightful way, using the accurate levels and scores provided. Keep responses concise (under 150 words) and relevant to personality development, goal setting, or self-improvement. If the question is unrelated, gently steer back to survey themes.
+    // Check if this is the first message for the user
+    const { count, error: countError } = await supabase
+      .from('chat_messages')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (countError) {
+      console.error('Error checking message count:', countError.message);
+      // Fallback to treating as first message to avoid blocking
+      const isFirstMessage = true;
+    } else {
+      const isFirstMessage = count === 0 || count === null;
+    }
+
+    let prompt;
+    if (isFirstMessage) {
+      prompt = `You are a helpful assistant for the KnowYou Survey App. The user completed a self-efficacy survey (score: ${selfEfficacyScore}/40, level: ${selfEfficacyLevel}) and a goal orientation survey (score: ${goalOrientationScore}/40, level: ${goalOrientationLevel}). Respond to their question about their results in a supportive, encouraging, and insightful way, using the accurate levels and scores provided. Keep responses concise (under 150 words) and relevant to personality development, goal setting, or self-improvement. If the question is unrelated, gently steer back to survey themes.
 User question: ${message}`;
+    } else {
+      prompt = `You are a helpful assistant for the KnowYou Survey App. The user has a self-efficacy score of ${selfEfficacyScore}/40 (${selfEfficacyLevel}) and goal orientation score of ${goalOrientationScore}/40 (${goalOrientationLevel}). Respond directly and accurately to their question in a supportive, encouraging, and insightful way. Keep responses concise (under 150 words) and focus on personality development, goal setting, or self-improvement. Reference scores only if relevant to the question.
+User question: ${message}`;
+    }
 
     let text;
     try {
