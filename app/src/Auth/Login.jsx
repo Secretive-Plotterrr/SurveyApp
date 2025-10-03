@@ -154,7 +154,7 @@ const Login = () => {
                 </label>
               </div>
             </div>
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-start text-sm">
               <button
                 type="button"
                 className="text-blue-400 hover:text-blue-500 hover:underline transition-colors bg-transparent border-none p-0 cursor-pointer"

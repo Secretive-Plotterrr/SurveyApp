@@ -5,6 +5,7 @@ import { signUp } from '../utils/auth.js'; // Adjust path based on your folder s
 const SignUp = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
@@ -121,7 +122,7 @@ const SignUp = () => {
                 Password
               </label>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 id="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -190,6 +191,19 @@ const SignUp = () => {
                   </div>
                 </div>
               )}
+              <div className="mt-2 flex items-center">
+                <input
+                  type="checkbox"
+                  id="showPassword"
+                  checked={showPassword}
+                  onChange={(e) => setShowPassword(e.target.checked)}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50"
+                  disabled={isLoading}
+                />
+                <label htmlFor="showPassword" className="ml-2 block text-sm text-gray-500">
+                  Show password
+                </label>
+              </div>
             </div>
             <div className="flex items-center justify-between text-sm">
               <button
