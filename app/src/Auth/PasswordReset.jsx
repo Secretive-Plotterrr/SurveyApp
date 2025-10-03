@@ -11,8 +11,6 @@ const PasswordReset = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -235,7 +233,7 @@ const PasswordReset = () => {
                     New Password
                   </label>
                   <input
-                    type={showNewPassword ? "text" : "password"}
+                    type="password"
                     id="password"
                     value={password}
                     onChange={handlePasswordChange}
@@ -246,25 +244,13 @@ const PasswordReset = () => {
                   {isOldPassword && (
                     <p className="mt-1 text-sm text-red-500">You cannot use your old password.</p>
                   )}
-                  <div className="mt-2 flex items-center">
-                    <input
-                      type="checkbox"
-                      id="showNewPassword"
-                      checked={showNewPassword}
-                      onChange={(e) => setShowNewPassword(e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="showNewPassword" className="ml-2 block text-sm text-gray-900">
-                      Show password
-                    </label>
-                  </div>
                 </div>
                 <div>
                   <label htmlFor="confirmPassword" className="block text-sm font-semibold text-black">
                     Confirm Password
                   </label>
                   <input
-                    type={showConfirmPassword ? "text" : "password"}
+                    type="password"
                     id="confirmPassword"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -272,18 +258,6 @@ const PasswordReset = () => {
                     placeholder="Confirm new password"
                     required
                   />
-                  <div className="mt-2 flex items-center">
-                    <input
-                      type="checkbox"
-                      id="showConfirmPassword"
-                      checked={showConfirmPassword}
-                      onChange={(e) => setShowConfirmPassword(e.target.checked)}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="showConfirmPassword" className="ml-2 block text-sm text-gray-900">
-                      Show password
-                    </label>
-                  </div>
                 </div>
               </>
             )}
