@@ -5,6 +5,7 @@ import { signUp } from '../utils/auth.js'; // Adjust path based on your folder s
 const SignUp = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -52,12 +53,16 @@ const SignUp = () => {
       return;
     }
 
+    setIsLoading(true);
+
     try {
       await signUp(email, password);
       setShowSuccessModal(true);
     } catch (error) {
       setErrorMessage(error || 'Signup failed');
       setShowErrorModal(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -88,6 +93,7 @@ const SignUp = () => {
                 className="mt-2 block w-full min-w-0 p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400"
                 placeholder="Enter your email"
                 required
+                disabled={isLoading}
               />
             </div>
             <div>
@@ -102,13 +108,15 @@ const SignUp = () => {
                 className="mt-2 block w-full min-w-0 p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition-colors bg-gray-50 text-black placeholder-gray-400"
                 placeholder="Enter your password"
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="flex items-center justify-between text-sm">
               <button
                 type="button"
-                className="text-blue-400 hover:text-blue-500 hover:underline transition-colors bg-transparent border-none p-0 cursor-pointer whitespace-nowrap max-w-[200px]"
+                className="text-blue-400 hover:text-blue-500 hover:underline transition-colors bg-transparent border-none p-0 cursor-pointer whitespace-nowrap max-w-[200px] disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={() => navigate('/login')}
+                disabled={isLoading}
               >
                 Already have an account? Log In
               </button>
@@ -116,9 +124,28 @@ const SignUp = () => {
             <div className="flex justify-center">
               <button
                 type="submit"
-                className="w-1/2 bg-blue-400 text-white p-3 rounded-lg hover:bg-blue-500 transition-colors font-semibold transform hover:scale-105"
+                disabled={isLoading}
+                className={`w-1/2 text-white p-3 rounded-lg transition-all font-semibold flex items-center justify-center ${
+                  isLoading
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-blue-400 hover:bg-blue-500 transform hover:scale-105'
+                }`}
               >
-                Sign Up
+                {isLoading ? (
+                  <>
+                    <svg
+                      className="w-5 h-5 text-white mr-2 animate-spin"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 0116 0 8 8 0 01-16 0" />
+                    </svg>
+                    Processing, please wait...
+                  </>
+                ) : (
+                  'Sign Up'
+                )}
               </button>
             </div>
           </form>
