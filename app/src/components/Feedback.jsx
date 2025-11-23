@@ -20,25 +20,23 @@ const staticTestimonials = [
 const Feedback = () => {
   const [user, setUser] = useState(null);
   const [feedbacks, setFeedbacks] = useState(staticTestimonials);
-  const [visibleCount, setVisibleCount] = useState(6);
+  const [showAll, setShowAll] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
 
-  // Form states
-  const [name, setName] = useState('');
+  // Form
+  const [displayName, setDisplayName] = useState('');
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
-  const [userDisplayName, setUserDisplayName] = useState('');
+  const [userSubmittedName, setUserSubmittedName] = useState('');
 
   // Stats
-  const [totalFeedbacks, setTotalFeedbacks] = useState(100);
+  const [totalFeedbacks, setTotalFeedbacks] = useState(106);
 
   const navigate = useNavigate();
 
-  // Load user & check if already submitted
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -47,7 +45,7 @@ const Feedback = () => {
       if (user) {
         const { data } = await supabase
           .from('table1')
-          .select('feedback, rating')
+          .select('feedback, rating, display_name')
           .eq('id', user.id)
           .single();
 
@@ -55,31 +53,29 @@ const Feedback = () => {
           setHasSubmitted(true);
           setComment(data.feedback);
           setRating(data.rating || 5);
-          setUserDisplayName(user.user_metadata?.full_name || user.email.split('@')[0]);
+          setUserSubmittedName(data.display_name || user.email.split('@')[0]);
+          setDisplayName(data.display_name || '');
         } else {
-          setName(user.user_metadata?.full_name || user.email.split('@')[0]);
+          setDisplayName(user.user_metadata?.full_name || user.email.split('@')[0]);
         }
       }
 
       loadAllFeedbacks();
-      setIsVisible(true);
     };
-
     init();
   }, []);
 
-  // Load all feedbacks + update total count
   const loadAllFeedbacks = async () => {
     setIsLoading(true);
     const { data, count } = await supabase
       .from('table1')
-      .select('email, feedback, rating', { count: 'exact' })
+      .select('display_name, feedback, rating', { count: 'exact' })
       .not('feedback', 'is', null)
-      .order('answered_at', { ascending: false, nullsLast: true });
+      .order('answered_at', { ascending: false });
 
     const realFeedbacks = (data || []).map((row, i) => ({
       id: `real-${i}`,
-      name: row.email?.split('@')[0].charAt(0).toUpperCase() + row.email?.split('@')[0].slice(1),
+      name: row.display_name || 'Anonymous',
       rating: row.rating || 5,
       feedback: row.feedback,
     }));
@@ -89,32 +85,31 @@ const Feedback = () => {
     setIsLoading(false);
   };
 
-  // Submit feedback
   const handleSubmitFeedback = async (e) => {
     e.preventDefault();
     if (!user) {
       setShowLoginModal(true);
       return;
     }
-    if (!name.trim() || !comment.trim()) return;
+    if (!displayName.trim() || !comment.trim()) return;
 
     setSubmitting(true);
-
     const { error } = await supabase
       .from('table1')
       .update({
         feedback: comment.trim(),
         rating: rating,
+        display_name: displayName.trim(),
       })
       .eq('id', user.id);
 
     if (error) {
-      alert('Failed to submit. Please try again.');
+      alert('Failed to submit. Try again.');
       console.error(error);
     } else {
       setHasSubmitted(true);
-      setUserDisplayName(name.trim());
-      loadAllFeedbacks(); // This will update total count + add new feedback
+      setUserSubmittedName(displayName.trim());
+      loadAllFeedbacks();
     }
     setSubmitting(false);
   };
@@ -132,138 +127,129 @@ const Feedback = () => {
     }, 2000);
   };
 
-  const handleLoginRedirect = () => {
-    setShowLoginModal(false);
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      navigate('/login');
-    }, 2000);
-  };
+  const visibleFeedbacks = showAll ? feedbacks : feedbacks.slice(0, 6);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pt-20 pb-16">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-100 to-blue-200 pt-20 pb-20">
       {isLoading && <Loading2 />}
 
-      <div className={`container mx-auto px-6 max-w-7xl text-center transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+      <div className="container mx-auto px-6 max-w-7xl">
         {/* Header */}
-        <h1 className="text-5xl md:text-6xl font-bold mb-4">
-          <span className="text-gray-900">Know</span>
-          <span className="text-blue-600">You</span>
-        </h1>
-        <p className="text-xl text-gray-700 mb-12">Real people. Real results. Real insights.</p>
+        <div className="text-center mb-16">
+          <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-cyan-500">
+            KnowYou
+          </h1>
+          <p className="text-xl text-blue-800 mt-4">Hear from real users who discovered themselves</p>
+        </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          <div className="bg-white p-8 rounded-2xl shadow-lg">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/50">
             <p className="text-5xl font-bold text-blue-600">95+</p>
-            <p className="text-gray-600 mt-2">Active Today</p>
+            <p className="text-blue-700">Active Today</p>
           </div>
-          <div className="bg-white p-8 rounded-2xl shadow-lg">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/50">
             <p className="text-5xl font-bold text-blue-600">{totalFeedbacks}+</p>
-            <p className="text-gray-600 mt-2">Total Feedback</p>
+            <p className="text-blue-700">Total Feedback</p>
           </div>
-          <div className="bg-white p-8 rounded-2xl shadow-lg">
+          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/50">
             <p className="text-5xl font-bold text-blue-600">93.6%</p>
-            <p className="text-gray-600 mt-2">Rated Accurate</p>
+            <p className="text-blue-700">Rated Accurate</p>
           </div>
         </div>
 
         {/* Submit Feedback */}
-        <div className="bg-white rounded-3xl shadow-xl p-10 mb-16 max-w-3xl mx-auto border border-blue-100">
-          <h2 className="text-3xl font-bold text-gray-800 mb-8">
-            {hasSubmitted ? 'Thank You!' : 'Share Your Experience'}
+        <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-10 mb-20 max-w-4xl mx-auto border border-blue-100">
+          <h2 className="text-4xl font-bold text-center text-blue-800 mb-10">
+            {hasSubmitted ? 'Thank You!' : 'Share Your Thoughts'}
           </h2>
 
           {hasSubmitted ? (
-            <div className="text-center py-10">
-              <div className="text-8xl mb-6">Thank you!</div>
-              <div className="text-6xl text-yellow-400 mb-4">
+            <div className="text-center py-12">
+              <p className="text-8xl font-bold text-blue-600 mb-6">Thank you!</p>
+              <div className="text-7xl text-yellow-400 mb-6">
                 {'★'.repeat(rating)}{'☆'.repeat(5 - rating)}
               </div>
-              <p className="text-2xl italic text-gray-700 mb-6 leading-relaxed">"{comment}"</p>
-              <p className="text-lg font-medium text-blue-600">- {userDisplayName}</p>
+              <p className="text-2xl italic text-gray-700 mb-8 leading-relaxed">"{comment}"</p>
+              <p className="text-xl font-semibold text-blue-600">- {userSubmittedName}</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmitFeedback} className="space-y-6">
+            <form onSubmit={handleSubmitFeedback} className="space-y-8">
               <input
                 type="text"
                 placeholder="Your Name (as shown publicly)"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full px-8 py-5 text-xl border-2 border-blue-200 rounded-2xl focus:border-blue-500 focus:outline-none transition"
                 required
               />
-              <div className="flex justify-center gap-4 text-6xl">
+              <div className="flex justify-center gap-6 text-7xl">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
                     type="button"
                     onClick={() => setRating(star)}
-                    className={`transition-all duration-200 hover:scale-125 ${
-                      star <= rating ? 'text-yellow-400' : 'text-gray-300'
-                    }`}
+                    className={`transition-all hover:scale-125 ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
                   >
                     ★
                   </button>
                 ))}
               </div>
               <textarea
-                placeholder="Tell us what you really think..."
+                placeholder="What did you think of your personality report?"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                rows={5}
-                className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition resize-none"
+                rows={6}
+                className="w-full px-8 py-5 text-lg border-2 border-blue-200 rounded-2xl focus:border-blue-500 focus:outline-none resize-none"
                 required
               />
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold text-xl py-5 rounded-xl hover:from-blue-700 hover:to-blue-800 transition transform hover:scale-105 disabled:opacity-70"
+                className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-2xl py-6 rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition transform hover:scale-105 shadow-xl"
               >
-                {submitting ? 'Submitting...' : 'Submit My Feedback'}
+                {submitting ? 'Submitting...' : 'Submit Feedback'}
               </button>
             </form>
           )}
         </div>
 
-        {/* Testimonials Grid */}
-        <h2 className="text-4xl font-bold text-gray-800 mb-10">What People Are Saying</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {feedbacks.slice(0, visibleCount).map((t) => (
-            <div
-              key={t.id}
-              className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-gray-100"
-            >
-              <div className="flex items-center mb-5">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full mr-4"></div>
+        {/* Feedback Grid */}
+        <h2 className="text-4xl font-bold text-center text-blue-800 mb-12">User Testimonials</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 mb-12">
+          {visibleFeedbacks.map((t) => (
+            <div key={t.id} className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-3 border border-blue-100">
+              <div className="flex items-center mb-6">
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-full mr-4"></div>
                 <div>
-                  <p className="font-bold text-gray-800">{t.name}</p>
-                  <div className="flex text-yellow-400 text-xl">
+                  <p className="font-bold text-xl text-blue-800">{t.name}</p>
+                  <div className="flex text-2xl text-yellow-400">
                     {'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}
                   </div>
                 </div>
               </div>
-              <p className="text-gray-600 italic leading-relaxed">"{t.feedback}"</p>
+              <p className="text-gray-700 text-lg italic leading-relaxed">"{t.feedback}"</p>
             </div>
           ))}
         </div>
 
-        {/* See More */}
-        {visibleCount < feedbacks.length && (
-          <button
-            onClick={() => setVisibleCount(feedbacks.length)}
-            className="bg-blue-600 text-white px-10 py-4 rounded-full text-lg font-semibold hover:bg-blue-700 transition transform hover:scale-105 shadow-lg"
-          >
-            See All {feedbacks.length} Feedbacks
-          </button>
+        {/* Toggle Button */}
+        {feedbacks.length > 6 && (
+          <div className="text-center mt-10">
+            <button
+              onClick={() => setShowAll(!showAll)}
+              className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-12 py-5 rounded-full text-xl font-bold hover:from-blue-700 hover:to-cyan-600 transition transform hover:scale-110 shadow-2xl"
+            >
+              {showAll ? 'Hide Feedback' : `See All ${feedbacks.length} Feedbacks`}
+            </button>
+          </div>
         )}
 
         {/* Take Survey Button */}
-        <div className="mt-20">
+        <div className="text-center mt-24">
           <button
             onClick={handleSurveyClick}
-            className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-16 py-6 rounded-full text-2xl font-bold shadow-2xl hover:shadow-3xl transform hover:scale-110 transition duration-300"
+            className="bg-white text-blue-600 border-4 border-blue-600 px-16 py-8 rounded-full text-3xl font-bold hover:bg-blue-600 hover:text-white transition transform hover:scale-110 shadow-2xl"
           >
             Take The Personality Survey Now
           </button>
@@ -272,18 +258,16 @@ const Feedback = () => {
 
       {/* Login Modal */}
       {showLoginModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-3xl p-10 max-w-md w-full shadow-2xl">
-            <h3 className="text-3xl font-bold text-blue-600 mb-4">Login Required</h3>
-            <p className="text-gray-700 mb-8 text-lg">You need to be logged in to take the survey or leave feedback.</p>
-            <div className="flex gap-4">
-              <button onClick={handleLoginRedirect} className="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700">
-                Go to Login
-              </button>
-              <button onClick={() => setShowLoginModal(false)} className="flex-1 bg-gray-200 py-4 rounded-xl font-bold hover:bg-gray-300">
-                Cancel
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6">
+          <div className="bg-white rounded-3xl p-12 max-w-md w-full shadow-2xl text-center">
+            <h3 className="text-4xl font-bold text-blue-600 mb-6">Login Required</h3>
+            <p className="text-xl text-gray-700 mb-10">Please log in to continue</p>
+            <button
+              onClick={() => { setShowLoginModal(false); setIsLoading(true); setTimeout(() => { setIsLoading(false); navigate('/login'); }, 2000); }}
+              className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-12 py-6 rounded-full text-2xl font-bold hover:from-blue-700 hover:to-cyan-600 transition shadow-xl"
+            >
+              Go to Login
+            </button>
           </div>
         </div>
       )}
