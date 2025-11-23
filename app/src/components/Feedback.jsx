@@ -232,7 +232,7 @@ const Feedback = () => {
               onClick={() => setShowAll(!showAll)}
               className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-10 py-4 rounded-full text-lg font-bold hover:from-blue-700 hover:to-cyan-600 transition active:scale-95 shadow-xl"
             >
-              {showAll ? 'Hide Feedback' : `Show All ${feedbacks.length} Reviews`}
+              {showAll ? 'Hide Feedback' : `Show All Reviews`}
             </button>
           </div>
         )}
