@@ -24,7 +24,7 @@ const Feedback = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  // Form
+  // Form states
   const [displayName, setDisplayName] = useState('');
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
@@ -51,7 +51,7 @@ const Feedback = () => {
 
         if (data?.feedback) {
           setHasSubmitted(true);
-          setComment(data.feedback);
+          setComment(data.feedback || '');
           setRating(data.rating || 5);
           setUserSubmittedName(data.display_name || user.email.split('@')[0]);
           setDisplayName(data.display_name || '');
@@ -77,7 +77,7 @@ const Feedback = () => {
       id: `real-${i}`,
       name: row.display_name || 'Anonymous',
       rating: row.rating || 5,
-      feedback: row.feedback,
+      feedback: row.feedback || '',
     }));
 
     setFeedbacks([...staticTestimonials, ...realFeedbacks]);
@@ -104,7 +104,7 @@ const Feedback = () => {
       .eq('id', user.id);
 
     if (error) {
-      alert('Failed to submit. Try again.');
+      alert('Failed to submit. Please try again.');
       console.error(error);
     } else {
       setHasSubmitted(true);
@@ -130,66 +130,65 @@ const Feedback = () => {
   const visibleFeedbacks = showAll ? feedbacks : feedbacks.slice(0, 6);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-sky-100 to-blue-200 pt-20 pb-20">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pt-20 pb-24 px-4 sm:px-6 lg:px-8">
       {isLoading && <Loading2 />}
 
-      <div className="container mx-auto px-6 max-w-7xl">
-        {/* Header */}
+      <div className="max-w-7xl mx-auto">
+
+        {/* Header - Perfectly Centered */}
         <div className="text-center mb-16">
-          <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-700 to-cyan-500">
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">
             KnowYou
           </h1>
-          <p className="text-xl text-blue-800 mt-4">Hear from real users who discovered themselves</p>
+          <p className="mt-4 text-lg sm:text-xl text-gray-700">Real people. Real insights. Real growth.</p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/50">
-            <p className="text-5xl font-bold text-blue-600">95+</p>
-            <p className="text-blue-700">Active Today</p>
-          </div>
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/50">
-            <p className="text-5xl font-bold text-blue-600">{totalFeedbacks}+</p>
-            <p className="text-blue-700">Total Feedback</p>
-          </div>
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl border border-white/50">
-            <p className="text-5xl font-bold text-blue-600">93.6%</p>
-            <p className="text-blue-700">Rated Accurate</p>
-          </div>
+        {/* Stats - Mobile Responsive */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-16">
+          {[
+            { value: "95+", label: "Active Today" },
+            { value: `${totalFeedbacks}+`, label: "Total Feedback" },
+            { value: "93.6%", label: "Rated Accurate" }
+          ].map((stat, i) => (
+            <div key={i} className="bg-white/90 backdrop-blur-sm rounded-3xl p-8 text-center shadow-lg border border-gray-100">
+              <p className="text-4xl sm:text-5xl font-bold text-blue-600">{stat.value}</p>
+              <p className="mt-2 text-gray-600 text-sm sm:text-base">{stat.label}</p>
+            </div>
+          ))}
         </div>
 
-        {/* Submit Feedback */}
-        <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-10 mb-20 max-w-4xl mx-auto border border-blue-100">
-          <h2 className="text-4xl font-bold text-center text-blue-800 mb-10">
-            {hasSubmitted ? 'Thank You!' : 'Share Your Thoughts'}
+        {/* Submit Feedback Section */}
+        <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-12 mb-20 border border-gray-100 max-w-3xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-800 mb-10">
+            {hasSubmitted ? 'Thank You!' : 'Share Your Experience'}
           </h2>
 
           {hasSubmitted ? (
-            <div className="text-center py-12">
-              <p className="text-8xl font-bold text-blue-600 mb-6">Thank you!</p>
-              <div className="text-7xl text-yellow-400 mb-6">
+            <div className="text-center py-10">
+              <p className="text-6xl sm:text-8xl font-bold text-blue-600 mb-6">Thank you!</p>
+              <div className="text-6xl sm:text-7xl mb-8 text-yellow-400">
                 {'★'.repeat(rating)}{'☆'.repeat(5 - rating)}
               </div>
-              <p className="text-2xl italic text-gray-700 mb-8 leading-relaxed">"{comment}"</p>
-              <p className="text-xl font-semibold text-blue-600">- {userSubmittedName}</p>
+              <p className="text-xl sm:text-2xl italic text-gray-700 mb-6 leading-relaxed px-4">"{comment}"</p>
+              <p className="text-lg sm:text-xl font-medium text-blue-600">- {userSubmittedName}</p>
             </div>
           ) : (
             <form onSubmit={handleSubmitFeedback} className="space-y-8">
               <input
                 type="text"
-                placeholder="Your Name (as shown publicly)"
+                placeholder="Your Name (shown publicly)"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-8 py-5 text-xl border-2 border-blue-200 rounded-2xl focus:border-blue-500 focus:outline-none transition"
+                className="w-full px-6 py-5 text-lg border-2 border-gray-200 rounded-2xl focus:border-blue-500 focus:outline-none transition"
                 required
               />
-              <div className="flex justify-center gap-6 text-7xl">
+              <div className="flex justify-center gap-4 sm:gap-6 text-5xl sm:text-7xl">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
                     type="button"
                     onClick={() => setRating(star)}
-                    className={`transition-all hover:scale-125 ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
+                    className={`transition-all active:scale-110 ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
                   >
                     ★
                   </button>
@@ -199,14 +198,14 @@ const Feedback = () => {
                 placeholder="What did you think of your personality report?"
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                rows={6}
-                className="w-full px-8 py-5 text-lg border-2 border-blue-200 rounded-2xl focus:border-blue-500 focus:outline-none resize-none"
+                rows={5}
+                className="w-full px-6 py-5 text-lg border-2 border-gray-200 rounded-2xl focus:border-blue-500 focus:outline-none resize-none"
                 required
               />
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-2xl py-6 rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition transform hover:scale-105 shadow-xl"
+                className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-xl py-5 rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition active:scale-95 shadow-lg disabled:opacity-60"
               >
                 {submitting ? 'Submitting...' : 'Submit Feedback'}
               </button>
@@ -214,42 +213,45 @@ const Feedback = () => {
           )}
         </div>
 
-        {/* Feedback Grid */}
-        <h2 className="text-4xl font-bold text-center text-blue-800 mb-12">User Testimonials</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 mb-12">
+        {/* Testimonials Grid - Mobile Friendly */}
+        <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-800 mb-12">User Testimonials</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           {visibleFeedbacks.map((t) => (
-            <div key={t.id} className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all hover:-translate-y-3 border border-blue-100">
+            <div
+              key={t.id}
+              className="bg-white rounded-3xl p-8 shadow-lg hover:shadow-2xl transition-all active:scale-95 border border-gray-100"
+            >
               <div className="flex items-center mb-6">
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-full mr-4"></div>
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full mr-4"></div>
                 <div>
-                  <p className="font-bold text-xl text-blue-800">{t.name}</p>
+                  <p className="font-bold text-lg text-gray-800">{t.name}</p>
                   <div className="flex text-2xl text-yellow-400">
                     {'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}
                   </div>
                 </div>
               </div>
-              <p className="text-gray-700 text-lg italic leading-relaxed">"{t.feedback}"</p>
+              <p className="text-gray-700 italic leading-relaxed text-sm sm:text-base">"{t.feedback}"</p>
             </div>
           ))}
         </div>
 
-        {/* Toggle Button */}
+        {/* Show/Hide Toggle */}
         {feedbacks.length > 6 && (
-          <div className="text-center mt-10">
+          <div className="text-center mb-20">
             <button
               onClick={() => setShowAll(!showAll)}
-              className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-12 py-5 rounded-full text-xl font-bold hover:from-blue-700 hover:to-cyan-600 transition transform hover:scale-110 shadow-2xl"
+              className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-10 py-4 rounded-full text-lg font-bold hover:from-blue-700 hover:to-cyan-600 transition active:scale-95 shadow-xl"
             >
-              {showAll ? 'Hide Feedback' : `See All ${feedbacks.length} Feedbacks`}
+              {showAll ? 'Hide Feedback' : `Show All ${feedbacks.length} Reviews`}
             </button>
           </div>
         )}
 
-        {/* Take Survey Button */}
-        <div className="text-center mt-24">
+        {/* Take Survey Button - Big & Centered */}
+        <div className="text-center">
           <button
             onClick={handleSurveyClick}
-            className="bg-white text-blue-600 border-4 border-blue-600 px-16 py-8 rounded-full text-3xl font-bold hover:bg-blue-600 hover:text-white transition transform hover:scale-110 shadow-2xl"
+            className="bg-white text-blue-600 border-4 border-blue-600 px-12 sm:px-16 py-6 sm:py-8 rounded-full text-2xl sm:text-3xl font-bold hover:bg-blue-600 hover:text-white transition active:scale-95 shadow-2xl"
           >
             Take The Personality Survey Now
           </button>
@@ -258,13 +260,20 @@ const Feedback = () => {
 
       {/* Login Modal */}
       {showLoginModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-6">
-          <div className="bg-white rounded-3xl p-12 max-w-md w-full shadow-2xl text-center">
-            <h3 className="text-4xl font-bold text-blue-600 mb-6">Login Required</h3>
-            <p className="text-xl text-gray-700 mb-10">Please log in to continue</p>
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-6">
+          <div className="bg-white rounded-3xl p-10 max-w-sm w-full text-center shadow-2xl">
+            <h3 className="text-3xl font-bold text-blue-600 mb-6">Login Required</h3>
+            <p className="text-gray-700 mb-8">Please log in to continue</p>
             <button
-              onClick={() => { setShowLoginModal(false); setIsLoading(true); setTimeout(() => { setIsLoading(false); navigate('/login'); }, 2000); }}
-              className="bg-gradient-to-r from-blue-600 to-cyan-500 text-white px-12 py-6 rounded-full text-2xl font-bold hover:from-blue-700 hover:to-cyan-600 transition shadow-xl"
+              onClick={() => {
+                setShowLoginModal(false);
+                setIsLoading(true);
+                setTimeout(() => {
+                  setIsLoading(false);
+                  navigate('/login');
+                }, 2000);
+              }}
+              className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white py-5 rounded-full text-xl font-bold hover:from-blue-700 hover:to-cyan-600 transition active:scale-95 shadow-xl"
             >
               Go to Login
             </button>
