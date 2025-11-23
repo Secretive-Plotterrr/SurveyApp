@@ -26,38 +26,14 @@ const Header = () => {
   const [isUserLoading, setIsUserLoading] = useState(true);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [showLogoutCheckmark, setShowLogoutCheckmark] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
   const headerRef = useRef(null);
   const menuRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (location.pathname !== '/login') {
-      setIsVisible(true);
-    }
-  }, [location.pathname]);
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        isOpen &&
-        headerRef.current &&
-        menuRef.current &&
-        !headerRef.current.contains(event.target) &&
-        !menuRef.current.contains(event.target)
-      ) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
+  // Auth
   useEffect(() => {
     const fetchUser = async () => {
-      setIsUserLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       setIsUserLoading(false);
@@ -71,18 +47,37 @@ const Header = () => {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Active section detection (same as before — works perfectly)
-  useEffect(() => {
-    const currentHash = location.hash || '#home';
-    const currentPath = location.pathname;
+  // Active section detection
+  const getCurrentSection = () => {
+    if (location.pathname === '/ResultRecord1') return '/ResultRecord1';
+    if (location.hash && navItems.some(i => i.id === location.hash)) return location.hash;
+    return '#home';
+  };
 
-    if (currentPath === '/ResultRecord1') {
-      setActiveSection('/ResultRecord1');
-    } else if (navItems.some(item => item.id === currentHash)) {
-      setActiveSection(currentHash);
-    } else {
-      setActiveSection('#home');
-    }
+  useEffect(() => {
+    setActiveSection(getCurrentSection());
+
+    if (location.pathname !== '/') return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(`#${entry.target.id}`);
+          }
+        });
+      },
+      { rootMargin: '-20% 0px -70% 0px', threshold: 0 }
+    );
+
+    navItems.forEach((item) => {
+      if (item.id.startsWith('#')) {
+        const el = document.querySelector(item.id);
+        if (el) observer.observe(el);
+      }
+    });
+
+    return () => observer.disconnect();
   }, [location.pathname, location.hash]);
 
   const handleNavClick = (e, sectionId) => {
@@ -95,7 +90,7 @@ const Header = () => {
         navigate(sectionId);
         setIsLoadingResult(false);
         setIsOpen(false);
-      }, 2500);
+      }, 2000);
     } else {
       if (location.pathname !== '/') {
         navigate(`/${sectionId}`);
@@ -118,7 +113,6 @@ const Header = () => {
 
   const handleLogout = async () => {
     setShowLogoutModal(true);
-    setShowLogoutCheckmark(false);
     try {
       await supabase.auth.signOut();
       setUser(null);
@@ -126,8 +120,9 @@ const Header = () => {
         setShowLogoutModal(false);
         setShowUserMenu(false);
         navigate('/#home');
-      }, 2000);
+      }, 1800);
     } catch (err) {
+      console.error('Logout failed:', err);
       setShowLogoutModal(false);
     }
   };
@@ -141,7 +136,7 @@ const Header = () => {
 
       <header
         ref={headerRef}
-        className={`fixed top-0 left-0 right-0 bg-white shadow-md z-50 transition-all duration-300 ${
+        className={`fixed top-0 left-0 right-0 bg-white shadow-lg z-50 transition-all duration-300 ${
           location.pathname === '/login' ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}
       >
@@ -153,7 +148,7 @@ const Header = () => {
               <span className="text-blue-500">You</span>
             </a>
 
-            {/* Desktop Menu - NO UNDERLINE */}
+            {/* Desktop Menu */}
             <div className="hidden xl:flex items-center space-x-10">
               {navItems.map((item) => (
                 (location.pathname !== '/ResultRecord1' || item.id === '/ResultRecord1') && (
@@ -205,78 +200,83 @@ const Header = () => {
               )}
             </div>
 
-            {/* Mobile Menu Toggle */}
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="xl:hidden text-gray-700"
-            >
-              {isOpen ? (
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
+            {/* Mobile Hamburger - FAR RIGHT */}
+            <div className="xl:hidden ml-auto">
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="text-gray-700 p-2"
+              >
+                {isOpen ? (
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Mobile Menu */}
           {isOpen && (
-            <div ref={menuRef} className="xl:hidden absolute top-16 right-4 left-4 bg-white shadow-2xl rounded-xl border">
-              {navItems.map((item) => (
-                (location.pathname !== '/ResultRecord1' || item.id === '/ResultRecord1') && (
-                  <a
-                    key={item.id}
-                    href={item.id}
-                    onClick={(e) => handleNavClick(e, item.id)}
-                    className={`block px-6 py-4 text-lg font-medium transition ${
-                      activeSection === item.id
-                        ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {item.label}
-                  </a>
-                )
-              ))}
-              {user ? (
-                <>
-                  <div className="px-6 py-3 text-sm text-gray-600 border-t">{user.email}</div>
+            <div ref={menuRef} className="xl:hidden absolute top-16 left-0 right-0 bg-white shadow-2xl border-t">
+              <div className="px-6 py-4 space-y-1">
+                {navItems.map((item) => (
+                  (location.pathname !== '/ResultRecord1' || item.id === '/ResultRecord1') && (
+                    <a
+                      key={item.id}
+                      href={item.id}
+                      onClick={(e) => handleNavClick(e, item.id)}
+                      className={`block py-3 text-lg font-medium rounded-lg px-4 transition ${
+                        activeSection === item.id
+                          ? 'bg-blue-50 text-blue-600 font-bold'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {item.label}
+                    </a>
+                  )
+                ))}
+              </div>
+
+              <div className="border-t px-6 py-4">
+                {user ? (
+                  <>
+                    <p className="text-sm text-gray-600 mb-3 truncate">{user.email}</p>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full py-3 text-red-600 font-medium hover:bg-red-50 rounded-lg transition"
+                    >
+                      Logout
+                    </button>
+                  </>
+                ) : (
                   <button
-                    onClick={handleLogout}
-                    className="w-full text-left px-6 py-4 text-red-600 font-medium hover:bg-red-50 border-t"
+                    onClick={handleLoginClick}
+                    className="w-full py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition"
                   >
-                    Logout
+                    Login
                   </button>
-                </>
-              ) : (
-                <button
-                  onClick={handleLoginClick}
-                  className="w-full text-left px-6 py-4 bg-blue-600 text-white font-medium border-t"
-                >
-                  Login
-                </button>
-              )}
+                )}
+              </div>
             </div>
           )}
         </nav>
       </header>
 
-      {/* Logout Modal */}
+      {/* Logout Modal - Clean & Beautiful */}
       {showLogoutModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl p-10 text-center shadow-2xl">
-            <h3 className="text-2xl font-bold mb-6">Logging Out</h3>
-            {showLogoutCheckmark ? (
-              <div className="text-6xl text-green-500 mb-4">Check</div>
-            ) : (
-              <div className="text-6xl text-blue-500 animate-spin mb-4">Loading</div>
-            )}
-            <p className="text-gray-600">
-              {showLogoutCheckmark ? 'See you soon!' : 'Signing you out...'}
-            </p>
+          <div className="bg-white rounded-2xl p-10 text-center shadow-2xl max-w-sm w-full">
+            <h3 className="text-2xl font-bold mb-6 text-gray-800">Logging Out</h3>
+            <div className="mb-6">
+              <svg className="w-16 h-16 mx-auto text-blue-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 12a8 8 0 0116 0 8 8 0 01-16 0" />
+              </svg>
+            </div>
+            <p className="text-gray-600 text-lg">Signing you out securely...</p>
           </div>
         </div>
       )}
