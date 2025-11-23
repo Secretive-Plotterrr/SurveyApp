@@ -19,23 +19,28 @@ const staticTestimonials = [
 
 const Feedback = () => {
   const [user, setUser] = useState(null);
-  const [feedbacks, setFeedbacks] = useState([]);
+  const [feedbacks, setFeedbacks] = useState(staticTestimonials);
   const [visibleCount, setVisibleCount] = useState(6);
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  // Form states
   const [name, setName] = useState('');
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
-  const [stats, setStats] = useState({ today: 0, total: 0, accuracy: 0 });
+  const [submitting, setSubmitting] = useState(false);
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [userDisplayName, setUserDisplayName] = useState('');
+
+  // Stats
+  const [totalFeedbacks, setTotalFeedbacks] = useState(100);
 
   const navigate = useNavigate();
 
-  // Check auth + load user feedback
+  // Load user & check if already submitted
   useEffect(() => {
-    const checkUser = async () => {
+    const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
 
@@ -46,59 +51,43 @@ const Feedback = () => {
           .eq('id', user.id)
           .single();
 
-        if (data?.feedback || data?.rating) {
+        if (data?.feedback) {
           setHasSubmitted(true);
-          setName(user.user_metadata?.full_name || user.email.split('@')[0]);
+          setComment(data.feedback);
           setRating(data.rating || 5);
-          setComment(data.feedback || '');
+          setUserDisplayName(user.user_metadata?.full_name || user.email.split('@')[0]);
+        } else {
+          setName(user.user_metadata?.full_name || user.email.split('@')[0]);
         }
       }
+
+      loadAllFeedbacks();
+      setIsVisible(true);
     };
 
-    checkUser();
-    setIsVisible(true);
-    loadAllFeedbacks();
+    init();
   }, []);
 
-  // Load all public feedbacks
+  // Load all feedbacks + update total count
   const loadAllFeedbacks = async () => {
     setIsLoading(true);
     const { data, count } = await supabase
       .from('table1')
       .select('email, feedback, rating', { count: 'exact' })
       .not('feedback', 'is', null)
-      .order('answered_at', { ascending: false });
+      .order('answered_at', { ascending: false, nullsLast: true });
 
-    const formatted = (data || []).map((row, i) => ({
-      id: i + 100,
-      name: row.email?.split('@')[0].charAt(0).toUpperCase() + row.email?.split('@')[0].slice(1) || 'User',
+    const realFeedbacks = (data || []).map((row, i) => ({
+      id: `real-${i}`,
+      name: row.email?.split('@')[0].charAt(0).toUpperCase() + row.email?.split('@')[0].slice(1),
       rating: row.rating || 5,
-      feedback: row.feedback || '',
+      feedback: row.feedback,
     }));
 
-    setFeedbacks([...staticTestimonials, ...formatted]);
-    setStats(prev => ({ ...prev, total: count || 100 }));
+    setFeedbacks([...staticTestimonials, ...realFeedbacks]);
+    setTotalFeedbacks((count || 0) + staticTestimonials.length);
     setIsLoading(false);
   };
-
-  // Counter animation
-  useEffect(() => {
-    const animate = (setter, target, duration) => {
-      let start = 0;
-      const step = () => {
-        start += target / (duration / 16);
-        if (start < target) {
-          setter(Math.floor(start));
-          requestAnimationFrame(step);
-        } else setter(target);
-      };
-      requestAnimationFrame(step);
-    };
-
-    animate(v => setStats(s => ({ ...s, today: v })), 95, 2000);
-    animate(v => setStats(s => ({ ...s, total: v })), feedbacks.length || 106, 2500);
-    animate(v => setStats(s => ({ ...s, accuracy: v })), 93.6, 2000);
-  }, [feedbacks.length]);
 
   // Submit feedback
   const handleSubmitFeedback = async (e) => {
@@ -110,6 +99,7 @@ const Feedback = () => {
     if (!name.trim() || !comment.trim()) return;
 
     setSubmitting(true);
+
     const { error } = await supabase
       .from('table1')
       .update({
@@ -119,11 +109,12 @@ const Feedback = () => {
       .eq('id', user.id);
 
     if (error) {
-      alert('Error saving feedback. Try again.');
+      alert('Failed to submit. Please try again.');
       console.error(error);
     } else {
       setHasSubmitted(true);
-      loadAllFeedbacks();
+      setUserDisplayName(name.trim());
+      loadAllFeedbacks(); // This will update total count + add new feedback
     }
     setSubmitting(false);
   };
@@ -151,131 +142,145 @@ const Feedback = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-start bg-blue-50 pt-20 transition-opacity duration-700"
-      style={{ opacity: isVisible ? 1 : 0 }}>
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pt-20 pb-16">
       {isLoading && <Loading2 />}
 
-      <div className="container mx-auto px-4 max-w-6xl text-center">
-        <h1 className="text-4xl font-bold mb-6">
-          <span className="text-black">Know</span>
-          <span className="text-blue-500">You</span>
+      <div className={`container mx-auto px-6 max-w-7xl text-center transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+        {/* Header */}
+        <h1 className="text-5xl md:text-6xl font-bold mb-4">
+          <span className="text-gray-900">Know</span>
+          <span className="text-blue-600">You</span>
         </h1>
-        <p className="text-xl font-semibold mb-8 text-gray-700">See what others say about us!</p>
+        <p className="text-xl text-gray-700 mb-12">Real people. Real results. Real insights.</p>
 
         {/* Stats */}
-        <div className="flex flex-col sm:flex-row justify-center gap-6 mb-12">
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <p className="text-4xl font-bold text-blue-800">{stats.today}+</p>
-            <p className="text-sm text-gray-600">Active Users Today</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+          <div className="bg-white p-8 rounded-2xl shadow-lg">
+            <p className="text-5xl font-bold text-blue-600">95+</p>
+            <p className="text-gray-600 mt-2">Active Today</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <p className="text-4xl font-bold text-blue-800">{stats.total}+</p>
-            <p className="text-sm text-gray-600">Total Feedback</p>
+          <div className="bg-white p-8 rounded-2xl shadow-lg">
+            <p className="text-5xl font-bold text-blue-600">{totalFeedbacks}+</p>
+            <p className="text-gray-600 mt-2">Total Feedback</p>
           </div>
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <p className="text-4xl font-bold text-blue-800">{stats.accuracy.toFixed(1)}%</p>
-            <p className="text-sm text-gray-600">Rated Accurate</p>
+          <div className="bg-white p-8 rounded-2xl shadow-lg">
+            <p className="text-5xl font-bold text-blue-600">93.6%</p>
+            <p className="text-gray-600 mt-2">Rated Accurate</p>
           </div>
         </div>
 
-        {/* Submit Feedback Form */}
-        <div className="bg-white rounded-xl shadow-lg p-8 mb-12 max-w-2xl mx-auto">
-          <h2 className="text-2xl font-bold mb-6 text-blue-600">
-            {hasSubmitted ? 'Thank You!' : 'Leave Your Feedback'}
+        {/* Submit Feedback */}
+        <div className="bg-white rounded-3xl shadow-xl p-10 mb-16 max-w-3xl mx-auto border border-blue-100">
+          <h2 className="text-3xl font-bold text-gray-800 mb-8">
+            {hasSubmitted ? 'Thank You!' : 'Share Your Experience'}
           </h2>
 
           {hasSubmitted ? (
-            <div className="text-center py-8">
-              <p className="text-6xl mb-4">Thank you!</p>
-              <p className="text-xl text-green-600 font-bold">{rating} stars</p>
-              <p className="text-lg italic text-gray-700 mt-4">"{comment}"</p>
-              <p className="text-sm text-gray-500 mt-4">- {name}</p>
+            <div className="text-center py-10">
+              <div className="text-8xl mb-6">Thank you!</div>
+              <div className="text-6xl text-yellow-400 mb-4">
+                {'★'.repeat(rating)}{'☆'.repeat(5 - rating)}
+              </div>
+              <p className="text-2xl italic text-gray-700 mb-6 leading-relaxed">"{comment}"</p>
+              <p className="text-lg font-medium text-blue-600">- {userDisplayName}</p>
             </div>
           ) : (
             <form onSubmit={handleSubmitFeedback} className="space-y-6">
               <input
                 type="text"
-                placeholder="Your Name (as displayed)"
+                placeholder="Your Name (as shown publicly)"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:border-blue-500"
+                className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition"
                 required
               />
-              <div className="flex justify-center gap-4 text-5xl">
+              <div className="flex justify-center gap-4 text-6xl">
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <button key={star} type="button" onClick={() => setRating(star)}
-                    className={`transition-all ${star <= rating ? 'text-yellow-400 scale-125' : 'text-gray-300 hover:text-yellow-400'}`}>
+                  <button
+                    key={star}
+                    type="button"
+                    onClick={() => setRating(star)}
+                    className={`transition-all duration-200 hover:scale-125 ${
+                      star <= rating ? 'text-yellow-400' : 'text-gray-300'
+                    }`}
+                  >
                     ★
                   </button>
                 ))}
               </div>
               <textarea
-                placeholder="Share your experience..."
+                placeholder="Tell us what you really think..."
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                rows={4}
-                className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:border-blue-500"
+                rows={5}
+                className="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none transition resize-none"
                 required
               />
               <button
                 type="submit"
-                disabled={submitting || !user}
-                className="w-full bg-blue-600 text-white py-4 rounded-lg font-bold hover:bg-blue-700 disabled:opacity-50"
+                disabled={submitting}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold text-xl py-5 rounded-xl hover:from-blue-700 hover:to-blue-800 transition transform hover:scale-105 disabled:opacity-70"
               >
-                {submitting ? 'Submitting...' : user ? 'Submit Feedback' : 'Login to Submit'}
+                {submitting ? 'Submitting...' : 'Submit My Feedback'}
               </button>
             </form>
           )}
         </div>
 
-        {/* All Testimonials */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+        {/* Testimonials Grid */}
+        <h2 className="text-4xl font-bold text-gray-800 mb-10">What People Are Saying</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
           {feedbacks.slice(0, visibleCount).map((t) => (
-            <div key={t.id} className="bg-white p-6 rounded-lg shadow-md hover:scale-105 transition-all">
-              <div className="flex items-center mb-3">
-                <div className="w-10 h-10 bg-blue-200 rounded-full mr-3"></div>
+            <div
+              key={t.id}
+              className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border border-gray-100"
+            >
+              <div className="flex items-center mb-5">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full mr-4"></div>
                 <div>
-                  <p className="font-semibold">{t.name}</p>
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <span key={i} className={i < t.rating ? 'text-yellow-400' : 'text-gray-300'}>★</span>
-                    ))}
+                  <p className="font-bold text-gray-800">{t.name}</p>
+                  <div className="flex text-yellow-400 text-xl">
+                    {'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}
                   </div>
                 </div>
               </div>
-              <p className="text-gray-600 text-sm italic">"{t.feedback}"</p>
+              <p className="text-gray-600 italic leading-relaxed">"{t.feedback}"</p>
             </div>
           ))}
         </div>
 
-        {feedbacks.length > 6 && visibleCount < feedbacks.length && (
+        {/* See More */}
+        {visibleCount < feedbacks.length && (
           <button
             onClick={() => setVisibleCount(feedbacks.length)}
-            className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 mb-12"
+            className="bg-blue-600 text-white px-10 py-4 rounded-full text-lg font-semibold hover:bg-blue-700 transition transform hover:scale-105 shadow-lg"
           >
-            See All Feedback ({feedbacks.length})
+            See All {feedbacks.length} Feedbacks
           </button>
         )}
 
-        <button
-          onClick={handleSurveyClick}
-          className="bg-gradient-to-r from-blue-500 to-blue-700 text-white px-10 py-5 rounded-full text-xl font-bold hover:scale-105 shadow-xl"
-        >
-          Take The Personality Survey Now
-        </button>
+        {/* Take Survey Button */}
+        <div className="mt-20">
+          <button
+            onClick={handleSurveyClick}
+            className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-16 py-6 rounded-full text-2xl font-bold shadow-2xl hover:shadow-3xl transform hover:scale-110 transition duration-300"
+          >
+            Take The Personality Survey Now
+          </button>
+        </div>
       </div>
 
       {/* Login Modal */}
       {showLoginModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-8 rounded-xl shadow-2xl max-w-md w-full">
-            <h3 className="text-2xl font-bold text-blue-600 mb-4">Login Required</h3>
-            <p className="text-gray-700 mb-6">Please log in to continue.</p>
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-3xl p-10 max-w-md w-full shadow-2xl">
+            <h3 className="text-3xl font-bold text-blue-600 mb-4">Login Required</h3>
+            <p className="text-gray-700 mb-8 text-lg">You need to be logged in to take the survey or leave feedback.</p>
             <div className="flex gap-4">
-              <button onClick={handleLoginRedirect} className="bg-blue-600 text-white px-6 py-3 rounded-lg">
+              <button onClick={handleLoginRedirect} className="flex-1 bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700">
                 Go to Login
               </button>
-              <button onClick={() => setShowLoginModal(false)} className="bg-gray-200 px-6 py-3 rounded-lg">
+              <button onClick={() => setShowLoginModal(false)} className="flex-1 bg-gray-200 py-4 rounded-xl font-bold hover:bg-gray-300">
                 Cancel
               </button>
             </div>
