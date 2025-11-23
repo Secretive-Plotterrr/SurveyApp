@@ -24,7 +24,7 @@ const Feedback = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  // Form states
+  // Form
   const [displayName, setDisplayName] = useState('');
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState('');
@@ -114,28 +114,15 @@ const Feedback = () => {
     setSubmitting(false);
   };
 
-  const handleSurveyClick = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      setShowLoginModal(true);
-      return;
-    }
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      navigate('/survey1');
-    }, 2000);
-  };
-
   const visibleFeedbacks = showAll ? feedbacks : feedbacks.slice(0, 6);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pt-20 pb-24 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white pt-20 pb-32 px-4 sm:px-6 lg:px-8">
       {isLoading && <Loading2 />}
 
       <div className="max-w-7xl mx-auto">
 
-        {/* Header - Perfectly Centered */}
+        {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">
             KnowYou
@@ -143,7 +130,7 @@ const Feedback = () => {
           <p className="mt-4 text-lg sm:text-xl text-gray-700">Real people. Real insights. Real growth.</p>
         </div>
 
-        {/* Stats - Mobile Responsive */}
+        {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-16">
           {[
             { value: "95+", label: "Active Today" },
@@ -157,14 +144,14 @@ const Feedback = () => {
           ))}
         </div>
 
-        {/* Submit Feedback Section */}
+        {/* Submit Feedback - Centered */}
         <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-12 mb-20 border border-gray-100 max-w-3xl mx-auto">
           <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-800 mb-10">
             {hasSubmitted ? 'Thank You!' : 'Share Your Experience'}
           </h2>
 
           {hasSubmitted ? (
-            <div className="text-center py-10">
+            <div className="text-center py-12">
               <p className="text-6xl sm:text-8xl font-bold text-blue-600 mb-6">Thank you!</p>
               <div className="text-6xl sm:text-7xl mb-8 text-yellow-400">
                 {'★'.repeat(rating)}{'☆'.repeat(5 - rating)}
@@ -202,18 +189,21 @@ const Feedback = () => {
                 className="w-full px-6 py-5 text-lg border-2 border-gray-200 rounded-2xl focus:border-blue-500 focus:outline-none resize-none"
                 required
               />
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-xl py-5 rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition active:scale-95 shadow-lg disabled:opacity-60"
-              >
-                {submitting ? 'Submitting...' : 'Submit Feedback'}
-              </button>
+              {/* Centered Submit Button */}
+              <div className="flex justify-center pt-6">
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="w-full max-w-md bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold text-xl py-5 rounded-2xl hover:from-blue-700 hover:to-cyan-600 transition active:scale-95 shadow-xl disabled:opacity-60"
+                >
+                  {submitting ? 'Submitting...' : 'Submit Feedback'}
+                </button>
+              </div>
             </form>
           )}
         </div>
 
-        {/* Testimonials Grid - Mobile Friendly */}
+        {/* Testimonials */}
         <h2 className="text-3xl sm:text-4xl font-bold text-center text-gray-800 mb-12">User Testimonials</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
           {visibleFeedbacks.map((t) => (
@@ -247,15 +237,7 @@ const Feedback = () => {
           </div>
         )}
 
-        {/* Take Survey Button - Big & Centered */}
-        <div className="text-center">
-          <button
-            onClick={handleSurveyClick}
-            className="bg-white text-blue-600 border-4 border-blue-600 px-12 sm:px-16 py-6 sm:py-8 rounded-full text-2xl sm:text-3xl font-bold hover:bg-blue-600 hover:text-white transition active:scale-95 shadow-2xl"
-          >
-            Take The Personality Survey Now
-          </button>
-        </div>
+        {/* "Take Survey" button REMOVED as requested */}
       </div>
 
       {/* Login Modal */}
