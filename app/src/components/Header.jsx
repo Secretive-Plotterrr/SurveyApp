@@ -27,94 +27,101 @@ const Header = () => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [showLogoutCheckmark, setShowLogoutCheckmark] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
   const headerRef = useRef(null);
   const menuRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Hide header on login page
   useEffect(() => {
     if (location.pathname !== '/login') {
-      setIsVisible(true);
+      const timer = setTimeout(() => setActiveSection(getCurrentSection()), 100);
+      return () => clearTimeout(timer);
     }
-  }, [location.pathname]);
+  }, [location.pathname, location.hash]);
 
+  // Close mobile menu when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        isOpen &&
-        headerRef.current &&
-        menuRef.current &&
-        !headerRef.current.contains(event.target) &&
-        !menuRef.current.contains(event.target)
-      ) {
+    const handleClickOutside = (e) => {
+      if (isOpen && headerRef.current && menuRef.current &&
+        !headerRef.current.contains(e.target) && !menuRef.current.contains(e.target)) {
         setIsOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
+  // Auth
   useEffect(() => {
     const fetchUser = async () => {
-      setIsUserLoading(true);
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) {
-          console.error('Error fetching user:', error.message);
-          setUser(null);
-        } else {
-          console.log('User fetched:', user);
-          setUser(user);
-        }
-      } catch (error) {
-        console.error('Unexpected error fetching user:', error);
-        setUser(null);
-      } finally {
-        setIsUserLoading(false);
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      setIsUserLoading(false);
     };
-
     fetchUser();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session);
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setIsUserLoading(false);
     });
 
-    return () => {
-      authListener.subscription?.unsubscribe();
-    };
+    return () => listener.subscription.unsubscribe();
   }, []);
+
+  // MAIN FIX: Correctly detect current section from URL hash or scroll
+  const getCurrentSection = () => {
+    if (location.pathname === '/ResultRecord1') return '/ResultRecord1';
+    if (location.hash) return location.hash;
+    return '#home';
+  };
+
+  useEffect(() => {
+    setActiveSection(getCurrentSection());
+
+    // Only run scroll observer on homepage
+    if (location.pathname !== '/') return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setActiveSection(`#${entry.target.id}`);
+          }
+        });
+      },
+      { rootMargin: '-20% 0px -70% 0px', threshold: 0 }
+    );
+
+    navItems.forEach((item) => {
+      if (item.id.startsWith('#')) {
+        const el = document.querySelector(item.id);
+        if (el) observer.observe(el);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, [location.pathname, location.hash]);
 
   const handleNavClick = (e, sectionId) => {
     e.preventDefault();
+    setActiveSection(sectionId);
+
     if (sectionId === '/ResultRecord1') {
       setIsLoadingResult(true);
       setTimeout(() => {
         navigate(sectionId);
-        setActiveSection(sectionId);
         setIsLoadingResult(false);
         setIsOpen(false);
-      }, 2500);
+      }, 2000);
     } else {
-      if (sectionId.startsWith('#')) {
-        if (location.pathname !== '/') {
-          navigate(`/${sectionId}`);
-        } else {
-          const section = document.querySelector(sectionId);
-          if (section) {
-            section.scrollIntoView({ behavior: 'smooth' });
-          }
-        }
-        setActiveSection(sectionId);
+      if (location.pathname !== '/') {
+        navigate(`/${sectionId}`);
       } else {
-        navigate(sectionId);
-        setActiveSection(sectionId);
+        const el = document.querySelector(sectionId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
       }
       setIsOpen(false);
     }
@@ -132,151 +139,80 @@ const Header = () => {
   const handleLogout = async () => {
     setShowLogoutModal(true);
     setShowLogoutCheckmark(false);
-    const startTime = Date.now();
-
     try {
-      console.log('Initiating logout...');
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        console.error('Supabase signOut error:', error.message);
-        throw error;
-      }
-
-      localStorage.removeItem('token');
-      console.log('Local storage token removed');
-
-      await fetch('http://localhost:5000/auth/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-      });
-
-      console.log('Logout successful');
+      await supabase.auth.signOut();
       setUser(null);
-
-      const elapsed = Date.now() - startTime;
-      setShowLogoutCheckmark(true);
       setTimeout(() => {
         setShowLogoutModal(false);
         setShowUserMenu(false);
-        setIsOpen(false);
-        if (location.pathname === '/ResultRecord1') {
-          window.location.reload();
-        } else {
-          navigate('/#home');
-        }
-      }, Math.max(0, 2000 - elapsed));
-    } catch (error) {
-      console.error('Logout error:', error);
+        navigate('/#home');
+      }, 2000);
+    } catch (err) {
+      console.error(err);
       setShowLogoutModal(false);
     }
   };
 
-  const toggleUserMenu = () => {
-    setShowUserMenu(!showUserMenu);
-  };
-
-  const getUserInitials = () => {
-    if (!user || !user.email) return 'U';
-    const name = user.email.split('@')[0];
-    return name.charAt(0).toUpperCase();
-  };
-
-  useEffect(() => {
-    const matchingNavItem = navItems.find(
-      (item) => item.id === location.pathname || item.id === `#${location.hash}` || item.id === location.hash
-    );
-    setActiveSection(matchingNavItem ? matchingNavItem.id : '#home');
-
-    if (location.pathname !== '/') return;
-
-    const observerOptions = { root: null, rootMargin: '0px', threshold: 0.5 };
-
-    const observerCallback = (entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) setActiveSection(`#${entry.target.id}`);
-      });
-    };
-
-    const observer = new IntersectionObserver(observerCallback, observerOptions);
-    navItems.forEach((item) => {
-      if (item.id.startsWith('#')) {
-        const section = document.querySelector(item.id);
-        if (section) observer.observe(section);
-      }
-    });
-
-    return () => {
-      navItems.forEach((item) => {
-        if (item.id.startsWith('#')) {
-          const section = document.querySelector(item.id);
-          if (section) observer.unobserve(section);
-        }
-      });
-    };
-  }, [location.pathname, location.hash]);
-
-  const isResultPage = location.pathname === '/ResultRecord1';
+  const getUserInitials = () => user?.email?.[0]?.toUpperCase() || 'U';
 
   return (
     <>
       {isLoadingResult && <Loading3 />}
       {isLoadingLogin && <Loading />}
+
       <header
         ref={headerRef}
-        className={`fixed w-full bg-white shadow-md z-50 ${
-          isLoadingResult || isLoadingLogin || location.pathname === '/login' ? 'opacity-0' : 'opacity-100 transition-opacity duration-50 ease-in'
+        className={`fixed top-0 left-0 right-0 bg-white shadow-lg z-50 transition-all duration-300 ${
+          location.pathname === '/login' ? 'opacity-0 pointer-events-none' : 'opacity-100'
         }`}
-        style={{ opacity: isVisible && !isLoadingLogin && location.pathname !== '/login' ? 1 : 0 }}
       >
         <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex items-center space-x-2">
-              <a
-                href="#home"
-                onClick={(e) => handleNavClick(e, '#home')}
-                className="text-2xl font-bold text-gray-800"
-              >
-                <span className="text-black">Know</span>
-                <span className="text-blue-400">You</span>
-              </a>
-            </div>
+          <div className="flex justify-between items-center h-16">
+            {/* Logo */}
+            <a href="#home" onClick={(e) => handleNavClick(e, '#home')} className="text-2xl font-bold">
+              <span className="text-black">Know</span>
+              <span className="text-blue-500">You</span>
+            </a>
 
-            <div className="hidden xl:flex items-center space-x-8">
+            {/* Desktop Menu */}
+            <div className="hidden xl:flex items-center space-x-10">
               {navItems.map((item) => (
-                (!isResultPage || item.id === '/ResultRecord1') && (
+                (location.pathname !== '/ResultRecord1' || item.id === '/ResultRecord1') && (
                   <a
                     key={item.id}
                     href={item.id}
                     onClick={(e) => handleNavClick(e, item.id)}
-                    className={`text-gray-600 hover:text-gray-900 transition-colors cursor-pointer relative ${
-                      activeSection === item.id ? 'text-gray-900' : ''
+                    className={`relative pb-2 text-lg font-medium transition-colors ${
+                      activeSection === item.id
+                        ? 'text-blue-600'
+                        : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
                     {item.label}
                     {activeSection === item.id && (
-                      <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-900" />
+                      <span className="absolute bottom-0 left-0 w-full h-1 bg-blue-600 rounded-full transition-all duration-300" />
                     )}
                   </a>
                 )
               ))}
+
+              {/* User/Login */}
               {isUserLoading ? (
-                <div className="w-10 h-10"></div>
+                <div className="w-10 h-10 bg-gray-200 rounded-full animate-pulse" />
               ) : user ? (
                 <div className="relative">
                   <button
-                    onClick={toggleUserMenu}
-                    className="flex items-center justify-center w-10 h-10 rounded-full bg-blue-400 text-white font-semibold hover:bg-blue-500 transition-colors"
-                    title={user.email}
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="w-10 h-10 rounded-full bg-blue-500 text-white font-bold hover:bg-blue-600 transition"
                   >
                     {getUserInitials()}
                   </button>
                   {showUserMenu && (
-                    <div className="absolute top-12 right-0 bg-white shadow-md rounded-md py-2 w-48 max-w-[90vw] z-50 overflow-hidden">
-                      <div className="px-4 py-2 text-gray-600 border-b truncate">{user.email}</div>
+                    <div className="absolute top-12 right-0 bg-white shadow-xl rounded-lg py-3 w-56 border">
+                      <p className="px-4 py-2 text-sm text-gray-600 border-b">{user.email}</p>
                       <button
                         onClick={handleLogout}
-                        className="block w-full text-left px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                        className="w-full text-left px-4 py-3 text-red-600 hover:bg-red-50 font-medium"
                       >
                         Logout
                       </button>
@@ -286,69 +222,63 @@ const Header = () => {
               ) : (
                 <button
                   onClick={handleLoginClick}
-                  className="border border-blue-400 text-blue-400 bg-white px-4 py-2 rounded-md hover:bg-blue-50 hover:border-blue-500 hover:text-blue-500 transition-colors"
+                  className="bg-blue-600 text-white px-6 py-2.5 rounded-full font-medium hover:bg-blue-700 transition"
                 >
                   Login
                 </button>
               )}
             </div>
 
-            <div className="xl:hidden flex items-center">
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="text-gray-600 hover:text-gray-900 focus:outline-none"
-              >
-                {isOpen ? (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : (
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                )}
-              </button>
-            </div>
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="xl:hidden text-gray-700"
+            >
+              {isOpen ? (
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              ) : (
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              )}
+            </button>
           </div>
 
+          {/* Mobile Menu */}
           {isOpen && (
-            <div
-              ref={menuRef}
-              className="xl:hidden bg-white shadow-md absolute top-16 right-4 w-48 max-w-[90vw] rounded-md py-2 overflow-hidden"
-            >
+            <div ref={menuRef} className="xl:hidden absolute top-16 right-4 left-4 bg-white shadow-2xl rounded-xl border overflow-hidden">
               {navItems.map((item) => (
-                (!isResultPage || item.id === '/ResultRecord1') && (
+                (location.pathname !== '/ResultRecord1' || item.id === '/ResultRecord1') && (
                   <a
                     key={item.id}
                     href={item.id}
                     onClick={(e) => handleNavClick(e, item.id)}
-                    className={`block px-4 py-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors cursor-pointer relative ${
-                      activeSection === item.id ? 'text-gray-900' : ''
+                    className={`block px-6 py-4 text-lg font-medium transition ${
+                      activeSection === item.id
+                        ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
+                        : 'text-gray-700 hover:bg-gray-50'
                     }`}
                   >
                     {item.label}
                   </a>
                 )
               ))}
-              {isUserLoading ? (
-                <div className="px-4 py-2"></div>
-              ) : user ? (
+              {user ? (
                 <>
-                  <div className="px-4 py-2 text-gray-600 border-b truncate">{user.email}</div>
+                  <div className="px-6 py-3 text-sm text-gray-600 border-t">{user.email}</div>
                   <button
                     onClick={handleLogout}
-                    className="block w-full text-left px-4 py-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                    className="w-full text-left px-6 py-4 text-red-600 font-medium hover:bg-red-50 border-t"
                   >
                     Logout
                   </button>
                 </>
               ) : (
                 <button
-                  onClick={() => {
-                    handleLoginClick();
-                    setIsOpen(false);
-                  }}
-                  className="block w-full text-left px-4 py-1.5 border border-blue-400 text-blue-400 bg-white hover:bg-blue-50 hover:border-blue-500 hover:text-blue-500 transition-colors"
+                  onClick={handleLoginClick}
+                  className="w-full text-left px-6 py-4 bg-blue-600 text-white font-medium border-t"
                 >
                   Login
                 </button>
@@ -357,42 +287,20 @@ const Header = () => {
           )}
         </nav>
       </header>
+
+      {/* Logout Modal */}
       {showLogoutModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 px-4">
-          <div
-            className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full transform transition-all ease-out duration-300"
-            style={{
-              transform: showLogoutModal ? 'scale(1)' : 'scale(0.9)',
-              opacity: showLogoutModal ? 1 : 0,
-            }}
-          >
-            <h3 className="text-xl sm:text-2xl font-bold text-center text-black mb-4">
-              Logging Out
-            </h3>
-            <p className="text-center text-gray-600 mb-6 text-sm sm:text-base">
-              {showLogoutCheckmark ? 'Logout successful!' : 'Logging you out...'}
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl p-10 text-center shadow-2xl">
+            <h3 className="text-2xl font-bold mb-6">Logging Out</h3>
+            {showLogoutCheckmark ? (
+              <div className="text-6xl text-green-500 mb-4">Check</div>
+            ) : (
+              <div className="text-6xl text-blue-500 animate-spin mb-4">Loading</div>
+            )}
+            <p className="text-gray-600">
+              {showLogoutCheckmark ? 'See you soon!' : 'Signing you out...'}
             </p>
-            <div className="flex justify-center">
-              {showLogoutCheckmark ? (
-                <svg
-                  className="w-10 sm:w-12 h-10 sm:h-12 text-green-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
-              ) : (
-                <svg
-                  className="w-10 sm:w-12 h-10 sm:h-12 text-blue-400 animate-spin"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 12a8 8 0 0116 0 8 8 0 01-16 0" />
-                </svg>
-              )}
-            </div>
           </div>
         </div>
       )}
